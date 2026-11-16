@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+  <title>4컷 웹툰 아카이브 | nakhwa-archive</title>
+  <style>
+    :root {
+      --bg-color: #0f0f12;
+      --card-bg: #1a1a1f;
+      --card-hover: #24242b;
+      --text-main: #f4f4f6;
+      --text-sub: #9898a6;
+      --accent: #e65c7b; /* 낙화 포인트 컬러 */
+      --border: #282830;
+      --bar-bg: rgba(18, 18, 22, 0.92);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+      line-height: 1.4;
+      padding-bottom: calc(48px + env(safe-area-inset-bottom));
+    }
+
+    /* 모바일 상단 고정 헤더 */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--bar-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      padding: calc(14px + env(safe-area-inset-top)) 16px 12px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+
+    header h1 {
+      font-size: 1.18rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .episode-count {
+      font-size: 0.78rem;
+      color: var(--accent);
+      font-weight: 600;
+      background: rgba(230, 92, 123, 0.14);
+      padding: 3px 8px;
+      border-radius: 12px;
+      flex-shrink: 0;
+    }
+
+    /* 보기 모드 전환 토글 버튼 그룹 */
+    .view-toggle {
+      display: flex;
+      background: #18181d;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+      flex-shrink: 0;
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-sub);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 5px 9px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .toggle-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    /* 메인 컨테이너 */
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 16px 12px;
+    }
+
+    .status-msg {
+      text-align: center;
+      padding: 80px 16px;
+      color: var(--text-sub);
+      font-size: 0.95rem;
+    }
+
+    /* ==========================================
+       1. 썸네일(그리드) 보기 모드
+       ========================================== */
+    .episode-container.grid-view {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    @media (min-width: 540px) {
+      .episode-container.grid-view {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+    }
+
+    .grid-view .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.12s ease, border-color 0.12s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .grid-view .card:active {
+      transform: scale(0.97);
+      border-color: var(--accent);
+    }
+
+    .grid-view .thumb-wrap {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      background: #09090b;
+    }
+
+    .grid-view .thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+    }
+
+    .grid-view .card-info {
+      padding: 10px 12px;
+    }
+
+    .grid-view .card-num {
+      display: none; /* 그리드 뷰에서는 제목만 깔끔하게 표시 */
+    }
+
+    .grid-view .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ==========================================
+       2. 리스트 보기 모드
+       ========================================== */
+    .episode-container.list-view {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .list-view .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 8px 12px 8px 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transition: background 0.12s ease, border-color 0.12s ease;
+    }
+
+    .list-view .card:active {
+      background: var(--card-hover);
+      border-color: var(--accent);
+    }
+
+    .list-view .thumb-wrap {
+      width: 54px;
+      height: 54px;
+      border-radius: 7px;
+      overflow: hidden;
+      background: #09090b;
+      flex-shrink: 0;
+    }
+
+    .list-view .thumb-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+    }
+
+    .list-view .card-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .list-view .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .list-view .card-num {
+      font-size: 0.78rem;
+      color: var(--text-sub);
+      flex-shrink: 0;
+    }
+
+    /* ==========================================
+       페이지네이션 (20개 단위)
+       ========================================== */
+    .pagination {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .page-btn {
+      min-width: 38px;
+      height: 38px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text-main);
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.12s;
+    }
+
+    .page-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .page-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .page-btn:active:not(:disabled):not(.active) {
+      background: var(--card-hover);
+    }
+
+    /* ==========================================
+       모바일 풀스크린 코믹 뷰어
+       ========================================== */
+    .viewer-overlay {
+      position: fixed;
+      inset: 0;
+      background: #000000;
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+    }
+
+    .viewer-overlay.active {
+      display: flex;
+    }
+
+    .viewer-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1010;
+      padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+      background: var(--bar-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: transform 0.22s ease, opacity 0.22s ease;
+    }
+
+    .viewer-title {
+      font-size: 1rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding-right: 12px;
+    }
+
+    .page-badge {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      flex-shrink: 0;
+    }
+
+    .viewer-body {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: calc(64px + env(safe-area-inset-top)) 0 calc(84px + env(safe-area-inset-bottom));
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .viewer-body img {
+      width: 100%;
+      max-width: 600px;
+      height: auto;
+      display: block;
+      user-select: none;
+    }
+
+    .viewer-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 1010;
+      padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+      background: var(--bar-bg);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      transition: transform 0.22s ease, opacity 0.22s ease;
+    }
+
+    .ctrl-btn {
+      height: 46px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: #222228;
+      color: var(--text-main);
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.12s, transform 0.1s;
+    }
+
+    .ctrl-btn:active:not(:disabled) {
+      transform: scale(0.96);
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .ctrl-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .btn-close-center {
+      background: #2c2c35;
+      color: #fff;
+    }
+
+    .viewer-overlay.ui-hidden .viewer-header {
+      transform: translateY(-100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .viewer-overlay.ui-hidden .viewer-footer {
+      transform: translateY(100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-left">
+      <h1>4컷 만화</h1>
+      <span class="episode-count" id="episodeCount">로딩중</span>
+    </div>
+
+    <!-- 썸네일 / 리스트 보기 전환 버튼 -->
+    <div class="view-toggle" role="group" aria-label="목록 보기 방식">
+      <button type="button" class="toggle-btn active" id="btnGridView">⊞ 썸네일</button>
+      <button type="button" class="toggle-btn" id="btnListView">☰ 리스트</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="statusMsg" class="status-msg">목록을 불러오는 중입니다...</div>
+    <div id="episodeContainer" class="episode-container grid-view"></div>
+    <nav id="pagination" class="pagination" aria-label="페이지 이동"></nav>
+  </main>
+
+  <!-- 모바일 풀스크린 코믹 뷰어 -->
+  <div id="viewerOverlay" class="viewer-overlay" role="dialog" aria-modal="true">
+    <div class="viewer-header">
+      <div class="viewer-title" id="viewerTitle">제목</div>
+      <div class="page-badge" id="pageIndicator">1 / 1</div>
+    </div>
+
+    <div class="viewer-body" id="viewerBody">
+      <img id="viewerImg" src="" alt="4컷 만화" />
+    </div>
+
+    <div class="viewer-footer">
+      <button type="button" class="ctrl-btn" id="btnPrev">◀ 이전화</button>
+      <button type="button" class="ctrl-btn btn-close-center" id="btnClose">닫기</button>
+      <button type="button" class="ctrl-btn" id="btnNext">다음화 ▶</button>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // 1. 설정 영역 (폴더 경로 및 페이지당 항목 수)
+    // ==========================================
+    const CONFIG = {
+      owner: "nakhwa-archive",          // GitHub 계정명
+      repo: "nakhwa-archive.github.io", // 레포지토리 이름
+      folderPath: "html/aaa/images",    // 이미지가 들어있는 폴더 경로
+      itemsPerPage: 20                  // 한 페이지에 보여줄 항목 수
+    };
+
+    let episodes = [];
+    let currentEpisodeIndex = 0;
+    let currentPage = 1;
+    let viewMode = localStorage.getItem("comicViewMode") || "grid"; // 'grid' 또는 'list'
+
+    const containerEl = document.getElementById("episodeContainer");
+    const paginationEl = document.getElementById("pagination");
+    const statusEl = document.getElementById("statusMsg");
+    const countEl = document.getElementById("episodeCount");
+
+    const btnGridView = document.getElementById("btnGridView");
+    const btnListView = document.getElementById("btnListView");
+
+    const overlayEl = document.getElementById("viewerOverlay");
+    const viewerBodyEl = document.getElementById("viewerBody");
+    const viewerTitleEl = document.getElementById("viewerTitle");
+    const viewerImgEl = document.getElementById("viewerImg");
+    const pageIndicatorEl = document.getElementById("pageIndicator");
+    const btnPrev = document.getElementById("btnPrev");
+    const btnNext = document.getElementById("btnNext");
+    const btnClose = document.getElementById("btnClose");
+
+    // 초기 보기 모드 반영
+    function applyViewMode(mode) {
+      viewMode = mode;
+      localStorage.setItem("comicViewMode", mode);
+
+      if (mode === "grid") {
+        containerEl.className = "episode-container grid-view";
+        btnGridView.classList.add("active");
+        btnListView.classList.remove("active");
+      } else {
+        containerEl.className = "episode-container list-view";
+        btnListView.classList.add("active");
+        btnGridView.classList.remove("active");
+      }
+    }
+
+    btnGridView.addEventListener("click", () => applyViewMode("grid"));
+    btnListView.addEventListener("click", () => applyViewMode("list"));
+    applyViewMode(viewMode);
+
+    // 확장자 제거
+    function formatTitle(filename) {
+      return filename.replace(/\.[^/.]+$/, "");
+    }
+
+    // GitHub API에서 이미지 목록 불러오기
+    async function loadEpisodes() {
+      const apiUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.folderPath}`;
+
+      try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const files = await res.json();
+        const imageRegex = /\.(png|jpe?g|gif|webp)$/i;
+
+        // 제목순(1화, 2화 ... 20화 자연 정렬)
+        episodes = files
+          .filter(file => file.type === "file" && imageRegex.test(file.name))
+          .map(file => ({
+            title: formatTitle(file.name),
+            url: file.download_url
+          }))
+          .sort((a, b) => a.title.localeCompare(b.title, "ko", { numeric: true }));
+
+        renderPage(1, false);
+      } catch (err) {
+        statusEl.textContent = "이미지를 불러오지 못했습니다. 폴더 경로와 저장소 공개 여부를 확인해 주세요.";
+        countEl.textContent = "0화";
+        console.error(err);
+      }
+    }
+
+    // 특정 페이지(20개 단위) 렌더링
+    function renderPage(page, shouldScrollTop = true) {
+      if (episodes.length === 0) {
+        statusEl.textContent = "등록된 4컷 만화가 없습니다.";
+        countEl.textContent = "0화";
+        paginationEl.innerHTML = "";
+        return;
+      }
+
+      statusEl.style.display = "none";
+      countEl.textContent = `총 ${episodes.length}화`;
+
+      const totalPages = Math.ceil(episodes.length / CONFIG.itemsPerPage);
+      currentPage = Math.max(1, Math.min(page, totalPages));
+
+      const startIndex = (currentPage - 1) * CONFIG.itemsPerPage;
+      const endIndex = startIndex + CONFIG.itemsPerPage;
+      const pageItems = episodes.slice(startIndex, endIndex);
+
+      containerEl.innerHTML = "";
+
+      pageItems.forEach((ep, idx) => {
+        const globalIndex = startIndex + idx; // 전체 목록에서의 실제 인덱스
+        const card = document.createElement("article");
+        card.className = "card";
+        card.innerHTML = `
+          <div class="thumb-wrap">
+            <img src="${ep.url}" alt="${ep.title}" loading="lazy" />
+          </div>
+          <div class="card-info">
+            <div class="card-title">${ep.title}</div>
+            <span class="card-num">#${globalIndex + 1}</span>
+          </div>
+        `;
+        card.addEventListener("click", () => openViewer(globalIndex));
+        containerEl.appendChild(card);
+      });
+
+      renderPagination(totalPages);
+
+      if (shouldScrollTop) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+
+    // 하단 페이지 번호 버튼 생성
+    function renderPagination(totalPages) {
+      paginationEl.innerHTML = "";
+      if (totalPages <= 1) return; // 20개 이하일 때는 페이지네이션 숨김
+
+      // 이전 페이지 버튼
+      const prevPageBtn = document.createElement("button");
+      prevPageBtn.type = "button";
+      prevPageBtn.className = "page-btn";
+      prevPageBtn.textContent = "◀";
+      prevPageBtn.disabled = currentPage === 1;
+      prevPageBtn.addEventListener("click", () => renderPage(currentPage - 1));
+      paginationEl.appendChild(prevPageBtn);
+
+      // 페이지 번호 블록 계산 (모바일 화면에서 넘치지 않도록 최대 5개씩 표시)
+      const maxVisible = 5;
+      let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+      let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+      if (endPage - startPage + 1 < maxVisible) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = `page-btn ${i === currentPage ? "active" : ""}`;
+        btn.textContent = i;
+        btn.addEventListener("click", () => renderPage(i));
+        paginationEl.appendChild(btn);
+      }
+
+      // 다음 페이지 버튼
+      const nextPageBtn = document.createElement("button");
+      nextPageBtn.type = "button";
+      nextPageBtn.className = "page-btn";
+      nextPageBtn.textContent = "▶";
+      nextPageBtn.disabled = currentPage === totalPages;
+      nextPageBtn.addEventListener("click", () => renderPage(currentPage + 1));
+      paginationEl.appendChild(nextPageBtn);
+    }
+
+    // ==========================================
+    // 코믹 뷰어 동작 로직
+    // ==========================================
+    function openViewer(index) {
+      currentEpisodeIndex = index;
+      overlayEl.classList.remove("ui-hidden");
+      updateViewer();
+      overlayEl.classList.add("active");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeViewer() {
+      overlayEl.classList.remove("active");
+      document.body.style.overflow = "";
+
+      // 뷰어에서 다음 화를 계속 넘겨 다른 페이지로 넘어갔다면, 닫을 때 해당 페이지 목록으로 맞춰줌
+      const targetPage = Math.floor(currentEpisodeIndex / CONFIG.itemsPerPage) + 1;
+      if (targetPage !== currentPage) {
+        renderPage(targetPage, false);
+      }
+    }
+
+    function updateViewer() {
+      const ep = episodes[currentEpisodeIndex];
+      viewerTitleEl.textContent = ep.title;
+      viewerImgEl.src = ep.url;
+      viewerImgEl.alt = ep.title;
+      pageIndicatorEl.textContent = `${currentEpisodeIndex + 1} / ${episodes.length}`;
+
+      viewerBodyEl.scrollTop = 0;
+      btnPrev.disabled = currentEpisodeIndex === 0;
+      btnNext.disabled = currentEpisodeIndex === episodes.length - 1;
+    }
+
+    btnPrev.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (currentEpisodeIndex > 0) {
+        currentEpisodeIndex--;
+        updateViewer();
+      }
+    });
+
+    btnNext.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (currentEpisodeIndex < episodes.length - 1) {
+        currentEpisodeIndex++;
+        updateViewer();
+      }
+    });
+
+    btnClose.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeViewer();
+    });
+
+    // 모바일 터치 스와이프 및 탭 토글
+    let touchStartX = 0, touchStartY = 0;
+    viewerBodyEl.addEventListener("touchstart", (e) => {
+      if (e.touches.length > 1) return;
+      touchStartX = e.changedTouches[0].screenX;
+      touchStartY = e.changedTouches[0].screenY;
+    }, { passive: true });
+
+    viewerBodyEl.addEventListener("touchend", (e) => {
+      if (e.touches.length > 0) return;
+      const diffX = e.changedTouches[0].screenX - touchStartX;
+      const diffY = e.changedTouches[0].screenY - touchStartY;
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
+        if (diffX < 0 && currentEpisodeIndex < episodes.length - 1) {
+          currentEpisodeIndex++;
+          updateViewer();
+        } else if (diffX > 0 && currentEpisodeIndex > 0) {
+          currentEpisodeIndex--;
+          updateViewer();
+        }
+      }
+    }, { passive: true });
+
+    viewerBodyEl.addEventListener("click", () => {
+      overlayEl.classList.toggle("ui-hidden");
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (!overlayEl.classList.contains("active")) return;
+      if (e.key === "ArrowLeft" && currentEpisodeIndex > 0) {
+        currentEpisodeIndex--;
+        updateViewer();
+      } else if (e.key === "ArrowRight" && currentEpisodeIndex < episodes.length - 1) {
+        currentEpisodeIndex++;
+        updateViewer();
+      } else if (e.key === "Escape") {
+        closeViewer();
+      }
+    });
+
+    loadEpisodes();
+  </script>
+</body>
+</html>
