@@ -8,8 +8,8 @@
   <!-- 카카오톡 / SNS 링크 공유 미리보기(OG 태그) -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="4컷 웹툰 아카이브 | nakhwa-archive" />
-  <meta property="og:description" content="낙화 4컷 만화 모음집입니다." />
-  <meta property="og:image" content="https://nakhwa-archive.github.io/html/comics/thumbnail.jpg" />
+  <meta property="og:description" content="메이븐 길드 [낙화] 4컷 만화 모음집입니다." />
+  <meta property="og:image" content="https://nakhwa-archive.github.io/html/comics/thumbnail.png" />
   <meta property="og:url" content="https://nakhwa-archive.github.io/html/comics/" />
 
   <style>
@@ -36,7 +36,7 @@
       color: var(--text-main);
       font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
       line-height: 1.4;
-      padding-bottom: calc(48px + env(safe-area-inset-bottom));
+      padding-bottom: calc(32px + env(safe-area-inset-bottom));
     }
 
     /* 모바일 상단 고정 헤더 */
@@ -118,6 +118,23 @@
       padding: 16px 12px;
     }
 
+    /* 상단 홍보 배너 영역 */
+    .promo-banner {
+      width: 100%;
+      margin-bottom: 16px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+    }
+
+    .promo-banner img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+    }
+
     .status-msg {
       text-align: center;
       padding: 80px 16px;
@@ -177,7 +194,7 @@
     }
 
     .grid-view .card-num {
-      display: none; /* 그리드 뷰에서는 제목만 깔끔하게 표시 */
+      display: none;
     }
 
     .grid-view .card-title {
@@ -298,6 +315,60 @@
 
     .page-btn:active:not(:disabled):not(.active) {
       background: var(--card-hover);
+    }
+
+    /* ==========================================
+       하단 길드 홍보 푸터 & 맨 위로 버튼
+       ========================================== */
+    .guild-footer {
+      margin-top: 28px;
+      padding: 18px 16px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      text-align: center;
+      position: relative;
+    }
+
+    .scroll-top-btn {
+      width: 38px;
+      height: 38px;
+      margin: 0 auto 10px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: #24242b;
+      color: var(--text-main);
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+
+    .scroll-top-btn:active {
+      transform: scale(0.94);
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #ffffff;
+    }
+
+    .guild-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .guild-title .accent {
+      color: var(--accent);
+    }
+
+    .guild-sub {
+      font-size: 0.86rem;
+      color: var(--text-sub);
+      font-weight: 500;
     }
 
     /* ==========================================
@@ -446,9 +517,21 @@
   </header>
 
   <main>
+    <!-- 상단 홍보용 배너 영역 (html/comics/banner.png 업로드 시 표시) -->
+    <div class="promo-banner" id="promoBanner">
+      <img src="./banner.png" alt="메이븐 길드 낙화 홍보 배너" onerror="document.getElementById('promoBanner').style.display='none';" />
+    </div>
+
     <div id="statusMsg" class="status-msg">목록을 불러오는 중입니다...</div>
     <div id="episodeContainer" class="episode-container grid-view"></div>
     <nav id="pagination" class="pagination" aria-label="페이지 이동"></nav>
+
+    <!-- 하단 길드 홍보 푸터 & 맨 위로 이동 버튼 -->
+    <footer class="guild-footer">
+      <button type="button" class="scroll-top-btn" id="btnScrollTop" aria-label="맨 위로 이동">▲</button>
+      <p class="guild-title">⚔️ 메이븐 길드 <span class="accent">[낙화]</span></p>
+      <p class="guild-sub">길드장 김정환 · 가입 문의 환영 🌸</p>
+    </footer>
   </main>
 
   <!-- 모바일 풀스크린 코믹 뷰어 -->
@@ -483,7 +566,7 @@
     let episodes = [];
     let currentEpisodeIndex = 0;
     let currentPage = 1;
-    let viewMode = localStorage.getItem("comicViewMode") || "grid"; // 'grid' 또는 'list'
+    let viewMode = localStorage.getItem("comicViewMode") || "grid";
 
     const containerEl = document.getElementById("episodeContainer");
     const paginationEl = document.getElementById("pagination");
@@ -492,6 +575,7 @@
 
     const btnGridView = document.getElementById("btnGridView");
     const btnListView = document.getElementById("btnListView");
+    const btnScrollTop = document.getElementById("btnScrollTop");
 
     const overlayEl = document.getElementById("viewerOverlay");
     const viewerBodyEl = document.getElementById("viewerBody");
@@ -501,6 +585,11 @@
     const btnPrev = document.getElementById("btnPrev");
     const btnNext = document.getElementById("btnNext");
     const btnClose = document.getElementById("btnClose");
+
+    // 맨 위로 버튼 동작
+    btnScrollTop.addEventListener("click", () => {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
 
     // 초기 보기 모드 반영
     function applyViewMode(mode) {
@@ -522,12 +611,10 @@
     btnListView.addEventListener("click", () => applyViewMode("list"));
     applyViewMode(viewMode);
 
-    // 확장자 제거
     function formatTitle(filename) {
       return filename.replace(/\.[^/.]+$/, "");
     }
 
-    // GitHub API에서 이미지 목록 불러오기
     async function loadEpisodes() {
       const apiUrl = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.folderPath}`;
 
@@ -538,7 +625,6 @@
         const files = await res.json();
         const imageRegex = /\.(png|jpe?g|gif|webp)$/i;
 
-        // 제목순(1화, 2화 ... 20화 자연 정렬)
         episodes = files
           .filter(file => file.type === "file" && imageRegex.test(file.name))
           .map(file => ({
@@ -555,7 +641,6 @@
       }
     }
 
-    // 특정 페이지(20개 단위) 렌더링
     function renderPage(page, shouldScrollTop = true) {
       if (episodes.length === 0) {
         statusEl.textContent = "등록된 4컷 만화가 없습니다.";
@@ -577,7 +662,7 @@
       containerEl.innerHTML = "";
 
       pageItems.forEach((ep, idx) => {
-        const globalIndex = startIndex + idx; // 전체 목록에서의 실제 인덱스
+        const globalIndex = startIndex + idx;
         const card = document.createElement("article");
         card.className = "card";
         card.innerHTML = `
@@ -600,12 +685,10 @@
       }
     }
 
-    // 하단 페이지 번호 버튼 생성
     function renderPagination(totalPages) {
       paginationEl.innerHTML = "";
-      if (totalPages <= 1) return; // 20개 이하일 때는 페이지네이션 숨김
+      if (totalPages <= 1) return;
 
-      // 이전 페이지 버튼
       const prevPageBtn = document.createElement("button");
       prevPageBtn.type = "button";
       prevPageBtn.className = "page-btn";
@@ -614,7 +697,6 @@
       prevPageBtn.addEventListener("click", () => renderPage(currentPage - 1));
       paginationEl.appendChild(prevPageBtn);
 
-      // 페이지 번호 블록 계산 (모바일 화면에서 넘치지 않도록 최대 5개씩 표시)
       const maxVisible = 5;
       let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
       let endPage = Math.min(totalPages, startPage + maxVisible - 1);
@@ -631,7 +713,6 @@
         paginationEl.appendChild(btn);
       }
 
-      // 다음 페이지 버튼
       const nextPageBtn = document.createElement("button");
       nextPageBtn.type = "button";
       nextPageBtn.className = "page-btn";
@@ -641,9 +722,6 @@
       paginationEl.appendChild(nextPageBtn);
     }
 
-    // ==========================================
-    // 코믹 뷰어 동작 로직
-    // ==========================================
     function openViewer(index) {
       currentEpisodeIndex = index;
       overlayEl.classList.remove("ui-hidden");
@@ -656,7 +734,6 @@
       overlayEl.classList.remove("active");
       document.body.style.overflow = "";
 
-      // 뷰어에서 다음 화를 계속 넘겨 다른 페이지로 넘어갔다면, 닫을 때 해당 페이지 목록으로 맞춰줌
       const targetPage = Math.floor(currentEpisodeIndex / CONFIG.itemsPerPage) + 1;
       if (targetPage !== currentPage) {
         renderPage(targetPage, false);
@@ -696,7 +773,6 @@
       closeViewer();
     });
 
-    // 모바일 터치 스와이프 및 탭 토글
     let touchStartX = 0, touchStartY = 0;
     viewerBodyEl.addEventListener("touchstart", (e) => {
       if (e.touches.length > 1) return;
