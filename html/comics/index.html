@@ -629,7 +629,7 @@
     }
 
     function getSafeKey(title) {
-      return encodeURIComponent(title).replace(/\./g, "%2E");
+      return title.replace(/[.#$\[\]\/]/g, "_");
     }
 
     async function fetchAllLikes() {
@@ -666,11 +666,12 @@
       updateLikeButtonUI(key);
 
       try {
-        const res = await fetch(`${CONFIG.firebaseDbUrl}/likes/${key}.json`);
+        const encodedKey = encodeURIComponent(key);
+        const res = await fetch(`${CONFIG.firebaseDbUrl}/likes/${encodedKey}.json`);
         const serverVal = (await res.json()) || 0;
         const updatedVal = isLiked ? Math.max(0, serverVal - 1) : serverVal + 1;
 
-        await fetch(`${CONFIG.firebaseDbUrl}/likes/${key}.json`, {
+        await fetch(`${CONFIG.firebaseDbUrl}/likes/${encodedKey}.json`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(updatedVal)
