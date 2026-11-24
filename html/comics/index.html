@@ -56,12 +56,12 @@
     .header-left {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       min-width: 0;
     }
 
     header h1 {
-      font-size: 1.18rem;
+      font-size: 1.12rem;
       font-weight: 700;
       letter-spacing: -0.02em;
       white-space: nowrap;
@@ -70,13 +70,41 @@
     }
 
     .episode-count {
-      font-size: 0.78rem;
+      font-size: 0.75rem;
       color: var(--accent);
       font-weight: 600;
       background: rgba(230, 92, 123, 0.14);
-      padding: 3px 8px;
+      padding: 3px 7px;
       border-radius: 12px;
       flex-shrink: 0;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .sort-btn {
+      background: #18181d;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 6px 9px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    .sort-btn:active {
+      transform: scale(0.95);
+      border-color: var(--accent);
     }
 
     .view-toggle {
@@ -92,15 +120,16 @@
       background: transparent;
       border: none;
       color: var(--text-sub);
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 600;
-      padding: 5px 9px;
+      padding: 5px 8px;
       border-radius: 6px;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 3px;
       transition: all 0.15s ease;
+      white-space: nowrap;
     }
 
     .toggle-btn.active {
@@ -116,7 +145,7 @@
 
     .promo-banner {
       width: 100%;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       border-radius: 12px;
       overflow: hidden;
       border: 1px solid var(--border);
@@ -128,6 +157,45 @@
       height: auto;
       display: block;
       object-fit: cover;
+    }
+
+    /* 첫화 / 마지막화 바로보기 바 */
+    .quick-read-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .quick-btn {
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--card-bg);
+      color: var(--text-main);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .quick-btn.latest {
+      background: rgba(230, 92, 123, 0.15);
+      border-color: rgba(230, 92, 123, 0.45);
+      color: #ff8ca5;
+    }
+
+    .quick-btn:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+
+    .quick-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
     }
 
     .status-msg {
@@ -522,15 +590,24 @@
       <span class="episode-count" id="episodeCount">로딩중</span>
     </div>
 
-    <div class="view-toggle" role="group" aria-label="목록 보기 방식">
-      <button type="button" class="toggle-btn active" id="btnGridView">⊞ 썸네일</button>
-      <button type="button" class="toggle-btn" id="btnListView">☰ 리스트</button>
+    <div class="header-controls">
+      <button type="button" class="sort-btn" id="btnSortToggle" aria-label="정렬 기준 변경">⇅ 최신순</button>
+
+      <div class="view-toggle" role="group" aria-label="목록 보기 방식">
+        <button type="button" class="toggle-btn active" id="btnGridView">⊞ 썸네일</button>
+        <button type="button" class="toggle-btn" id="btnListView">☰ 리스트</button>
+      </div>
     </div>
   </header>
 
   <main>
     <div class="promo-banner" id="promoBanner">
       <img src="./banner.png" alt="메이븐 길드 낙화 홍보 배너" onerror="document.getElementById('promoBanner').style.display='none';" />
+    </div>
+
+    <div class="quick-read-bar">
+      <button type="button" class="quick-btn" id="btnFirstEp" disabled>⏮ 첫화 보기</button>
+      <button type="button" class="quick-btn latest" id="btnLatestEp" disabled>🔥 마지막화 보기</button>
     </div>
 
     <div id="statusMsg" class="status-msg">목록을 불러오는 중입니다...</div>
@@ -574,20 +651,25 @@
       firebaseDbUrl: "https://nakhwa-a90f6-default-rtdb.firebaseio.com"
     };
 
+    // episodes는 항상 1화 -> 최신화 순(정방향)으로 유지 (뷰어 이전/다음 흐름 일관성 유지)
     let episodes = [];
     let likesData = {};
     let myLikedMap = JSON.parse(localStorage.getItem("nakhwaMyLikes") || "{}");
     let currentEpisodeIndex = 0;
     let currentPage = 1;
     let viewMode = localStorage.getItem("comicViewMode") || "grid";
+    let sortOrder = localStorage.getItem("comicSortOrder") || "latest"; // 기본값: 최신화부터 ("latest" | "oldest")
 
     const containerEl = document.getElementById("episodeContainer");
     const paginationEl = document.getElementById("pagination");
     const statusEl = document.getElementById("statusMsg");
     const countEl = document.getElementById("episodeCount");
 
+    const btnSortToggle = document.getElementById("btnSortToggle");
     const btnGridView = document.getElementById("btnGridView");
     const btnListView = document.getElementById("btnListView");
+    const btnFirstEp = document.getElementById("btnFirstEp");
+    const btnLatestEp = document.getElementById("btnLatestEp");
     const btnScrollTop = document.getElementById("btnScrollTop");
 
     const overlayEl = document.getElementById("viewerOverlay");
@@ -605,6 +687,18 @@
     btnScrollTop.addEventListener("click", () => {
       window.scrollTo({ top: 0, behavior: "smooth" });
     });
+
+    function updateSortButtonUI() {
+      btnSortToggle.textContent = sortOrder === "latest" ? "⇅ 최신순" : "⇅ 첫화순";
+    }
+
+    btnSortToggle.addEventListener("click", () => {
+      sortOrder = sortOrder === "latest" ? "oldest" : "latest";
+      localStorage.setItem("comicSortOrder", sortOrder);
+      updateSortButtonUI();
+      renderPage(1, false);
+    });
+    updateSortButtonUI();
 
     function applyViewMode(mode) {
       viewMode = mode;
@@ -624,12 +718,28 @@
     btnListView.addEventListener("click", () => applyViewMode("list"));
     applyViewMode(viewMode);
 
+    // 첫화 보기 / 마지막화 보기 클릭 이벤트
+    btnFirstEp.addEventListener("click", () => {
+      if (episodes.length > 0) openViewer(0);
+    });
+
+    btnLatestEp.addEventListener("click", () => {
+      if (episodes.length > 0) openViewer(episodes.length - 1);
+    });
+
     function formatTitle(filename) {
       return filename.replace(/\.[^/.]+$/, "");
     }
 
     function getSafeKey(title) {
       return title.replace(/[.#$\[\]\/]/g, "_");
+    }
+
+    function getSortedEpisodes() {
+      if (sortOrder === "latest") {
+        return [...episodes].reverse();
+      }
+      return episodes;
     }
 
     async function fetchAllLikes() {
@@ -713,11 +823,18 @@
 
         episodes = files
           .filter(file => file.type === "file" && imageRegex.test(file.name))
-          .map(file => ({
+          .sort((a, b) => formatTitle(a.name).localeCompare(formatTitle(b.name), "ko", { numeric: true }))
+          .map((file, index) => ({
+            epNumber: index + 1,
+            originalIndex: index,
             title: formatTitle(file.name),
             url: file.download_url
-          }))
-          .sort((a, b) => a.title.localeCompare(b.title, "ko", { numeric: true }));
+          }));
+
+        if (episodes.length > 0) {
+          btnFirstEp.disabled = false;
+          btnLatestEp.disabled = false;
+        }
 
         renderPage(1, false);
       } catch (err) {
@@ -738,17 +855,17 @@
       statusEl.style.display = "none";
       countEl.textContent = `총 ${episodes.length}화`;
 
-      const totalPages = Math.ceil(episodes.length / CONFIG.itemsPerPage);
+      const displayList = getSortedEpisodes();
+      const totalPages = Math.ceil(displayList.length / CONFIG.itemsPerPage);
       currentPage = Math.max(1, Math.min(page, totalPages));
 
       const startIndex = (currentPage - 1) * CONFIG.itemsPerPage;
       const endIndex = startIndex + CONFIG.itemsPerPage;
-      const pageItems = episodes.slice(startIndex, endIndex);
+      const pageItems = displayList.slice(startIndex, endIndex);
 
       containerEl.innerHTML = "";
 
-      pageItems.forEach((ep, idx) => {
-        const globalIndex = startIndex + idx;
+      pageItems.forEach((ep) => {
         const key = getSafeKey(ep.title);
         const likeCount = likesData[key] || 0;
         const isLiked = !!myLikedMap[key];
@@ -765,11 +882,11 @@
               <span class="card-like-badge ${isLiked ? "liked" : ""}">
                 ${isLiked ? "❤️" : "🤍"} ${likeCount}
               </span>
-              <span class="card-num">#${globalIndex + 1}</span>
+              <span class="card-num">#${ep.epNumber}</span>
             </div>
           </div>
         `;
-        card.addEventListener("click", () => openViewer(globalIndex));
+        card.addEventListener("click", () => openViewer(ep.originalIndex));
         containerEl.appendChild(card);
       });
 
@@ -829,7 +946,11 @@
       overlayEl.classList.remove("active");
       document.body.style.overflow = "";
 
-      const targetPage = Math.floor(currentEpisodeIndex / CONFIG.itemsPerPage) + 1;
+      // 현재 정렬 기준에 맞춰 닫았을 때 해당 에피소드가 속한 페이지로 이동
+      const displayIndex = sortOrder === "latest"
+        ? (episodes.length - 1 - currentEpisodeIndex)
+        : currentEpisodeIndex;
+      const targetPage = Math.floor(displayIndex / CONFIG.itemsPerPage) + 1;
       renderPage(targetPage, false);
     }
 
