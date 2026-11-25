@@ -3135,10 +3135,9 @@
     }
 
     /* ---------- 11. 꼬리잡기 스네이크 (Snake) 상태 ---------- */
-    // 캔버스(340x410) 내 상단 HUD(46px) 제외 영역을 16x18 그리드(칸당 20px)로 구성
     const SNAKE_CELL = 20;
-    const SNAKE_COLS = 16; // 16 * 20 = 320 (좌우 여백 10px씩)
-    const SNAKE_ROWS = 18; // 18 * 20 = 360 (상단 44px ~ 404px)
+    const SNAKE_COLS = 16;
+    const SNAKE_ROWS = 18;
     const SNAKE_OFFSET_X = 10;
     const SNAKE_OFFSET_Y = 44;
 
@@ -3171,7 +3170,7 @@
         x: chosen.x,
         y: chosen.y,
         isBonus,
-        timer: isBonus ? 90 : 0 // 보너스 보석은 90스텝 제한시간
+        timer: isBonus ? 90 : 0
       };
     }
 
@@ -3197,7 +3196,6 @@
     function queueSnakeDirection(nx, ny) {
       if (!snakeRunning || snakeOver) return;
       const lastDir = snakeDirQueue.length > 0 ? snakeDirQueue[snakeDirQueue.length - 1] : snakeDir;
-      // 정반대 방향(180도 유턴) 및 동일 방향 중복 입력 방지
       if ((nx === -lastDir.x && ny === -lastDir.y) || (nx === lastDir.x && ny === lastDir.y)) {
         return;
       }
@@ -3210,7 +3208,6 @@
       if (!snakeRunning || snakeOver) return;
 
       const now = performance.now();
-      // 길이가 길어질수록 이동 간격 단축 (145ms -> 최소 72ms)
       const stepInterval = Math.max(72, 145 - (snakeBody.length - 3) * 2.4);
       if (now - snakeLastStepTime < stepInterval) return;
       snakeLastStepTime = now;
@@ -3223,7 +3220,6 @@
       const nextX = head.x + snakeDir.x;
       const nextY = head.y + snakeDir.y;
 
-      // 외곽 벽 충돌 판정
       if (nextX < 0 || nextX >= SNAKE_COLS || nextY < 0 || nextY >= SNAKE_ROWS) {
         snakeOver = true;
         triggerGameOver(snakeSessionHadBest, snakeScore > 0);
@@ -3231,7 +3227,6 @@
       }
 
       const willEat = (nextX === snakeFood.x && nextY === snakeFood.y);
-      // 꼬리 충돌 판정 (먹지 않을 땐 맨 끝 꼬리가 빠지므로 제외)
       const checkLimit = willEat ? snakeBody.length : snakeBody.length - 1;
       for (let i = 0; i < checkLimit; i++) {
         if (snakeBody[i].x === nextX && snakeBody[i].y === nextY) {
@@ -3265,7 +3260,6 @@
     function drawSnakeFrame() {
       stepSnakeLogic();
 
-      // 1) 상단 HUD
       ctx.fillStyle = "#f4f4f6";
       ctx.font = "bold 13px sans-serif";
       ctx.textAlign = "left";
@@ -3280,13 +3274,11 @@
       ctx.fillText(`BEST ${snakeBest}`, 328, 22);
       ctx.fillText("스와이프 / 방향키", 328, 37);
 
-      // 2) 그리드 보드 배경
       const boardW = SNAKE_COLS * SNAKE_CELL;
       const boardH = SNAKE_ROWS * SNAKE_CELL;
       ctx.fillStyle = "#16161d";
       ctx.fillRect(SNAKE_OFFSET_X, SNAKE_OFFSET_Y, boardW, boardH);
 
-      // 체커보드 미세 타일
       for (let r = 0; r < SNAKE_ROWS; r++) {
         for (let c = 0; c < SNAKE_COLS; c++) {
           if ((r + c) % 2 === 0) {
@@ -3305,12 +3297,10 @@
       ctx.lineWidth = 2;
       ctx.strokeRect(SNAKE_OFFSET_X, SNAKE_OFFSET_Y, boardW, boardH);
 
-      // 3) 먹이 (삼색 경단 or 황금 벚꽃 보석)
       const fx = SNAKE_OFFSET_X + snakeFood.x * SNAKE_CELL + SNAKE_CELL / 2;
       const fy = SNAKE_OFFSET_Y + snakeFood.y * SNAKE_CELL + SNAKE_CELL / 2;
 
       if (snakeFood.isBonus) {
-        // 황금 벚꽃 보석 (+30점)
         ctx.fillStyle = "#ffd166";
         ctx.beginPath();
         ctx.moveTo(fx, fy - 8);
@@ -3323,7 +3313,6 @@
         ctx.lineWidth = 1.2;
         ctx.stroke();
       } else {
-        // 벚꽃 경단 (+10점)
         ctx.fillStyle = "#ffb7c5";
         ctx.beginPath();
         ctx.arc(fx, fy, 7, 0, Math.PI * 2);
@@ -3334,20 +3323,17 @@
         ctx.fill();
       }
 
-      // 4) 스네이크 몸통 & 머리 그리기 (꼬리부터 머리 역순으로 그려 머리가 위에 오도록)
       for (let i = snakeBody.length - 1; i >= 0; i--) {
         const seg = snakeBody[i];
         const sx = SNAKE_OFFSET_X + seg.x * SNAKE_CELL;
         const sy = SNAKE_OFFSET_Y + seg.y * SNAKE_CELL;
 
         if (i === 0) {
-          // 머리
           ctx.fillStyle = "#e65c7b";
           ctx.beginPath();
           ctx.roundRect(sx + 1, sy + 1, SNAKE_CELL - 2, SNAKE_CELL - 2, 6);
           ctx.fill();
 
-          // 진행 방향에 맞춘 두 눈
           ctx.fillStyle = "#ffffff";
           const eye1X = sx + SNAKE_CELL / 2 + snakeDir.x * 4 - (snakeDir.y !== 0 ? 4 : 0);
           const eye1Y = sy + SNAKE_CELL / 2 + snakeDir.y * 4 - (snakeDir.x !== 0 ? 4 : 0);
@@ -3356,7 +3342,6 @@
           ctx.beginPath(); ctx.arc(eye1X, eye1Y, 2.2, 0, Math.PI * 2); ctx.fill();
           ctx.beginPath(); ctx.arc(eye2X, eye2Y, 2.2, 0, Math.PI * 2); ctx.fill();
         } else {
-          // 꼬리로 갈수록 크기가 미세하게 줄어들고 색상이 교차됨
           const shrink = Math.min(4, Math.floor(i / 4));
           const pad = 2 + shrink * 0.5;
           ctx.fillStyle = i % 2 === 1 ? "#ff8ca5" : "#ffb7c5";
@@ -3385,7 +3370,7 @@
       }
     }
 
-    /* ---------- 로비 <-> 플레이 화면 전환 ---------- */
+    /* ---------- 로비 <-> 플레이 화면 전환 (브라우저 뒤로가기 지원) ---------- */
     function updateLobbyBadges() {
       document.getElementById("badgeSnake").textContent = `BEST ${snakeBest}점`;
       document.getElementById("badgeBrick").textContent = `BEST ${brickBest}점`;
@@ -3431,7 +3416,8 @@
       fitCanvasExactAspect();
     }
 
-    function showLobby() {
+    // 실제 DOM을 로비 상태로 복원하는 내부 함수
+    function renderLobbyDOM() {
       if (isGameFullscreen) setGameFullscreen(false);
       isInPlayScreen = false;
       stopAllGames();
@@ -3442,11 +3428,24 @@
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
 
-    function enterGame(game) {
+    // 버튼 클릭 등으로 로비로 나갈 때 히스토리와 동기화
+    function showLobby() {
+      if (history.state && history.state.view === "play") {
+        history.back();
+      } else {
+        renderLobbyDOM();
+      }
+    }
+
+    function enterGame(game, pushHistory = true) {
       activeGame = game;
       isInPlayScreen = true;
       stopAllGames();
       hideSubmitBar();
+
+      if (pushHistory) {
+        history.pushState({ view: "play", game }, "", `#${game}`);
+      }
 
       lobbyView.classList.add("hidden");
       playView.classList.add("active");
@@ -3517,10 +3516,19 @@
       requestAnimationFrame(fitCanvasExactAspect);
     }
 
+    // 브라우저/모바일 하드웨어 뒤로가기 버튼 감지
+    window.addEventListener("popstate", (e) => {
+      if (e.state && e.state.view === "play" && e.state.game) {
+        enterGame(e.state.game, false);
+      } else if (isInPlayScreen) {
+        renderLobbyDOM();
+      }
+    });
+
     document.querySelectorAll(".game-card").forEach(card => {
       card.addEventListener("click", () => {
         const game = card.getAttribute("data-game");
-        if (game) enterGame(game);
+        if (game) enterGame(game, true);
       });
     });
 
@@ -3856,7 +3864,6 @@
           } else {
             queueSnakeDirection(0, dy > 0 ? 1 : -1);
           }
-          // 연속 스와이프도 바로 반응하도록 기준점 갱신
           snakeSwipeStart = { x: e.clientX, y: e.clientY };
         }
         return;
@@ -4691,6 +4698,8 @@
       }
     });
 
+    // 첫 진입 시 기본 히스토리 상태 기록 및 URL 해시 복원 지원
+    history.replaceState({ view: "lobby" }, "", window.location.pathname);
     updateLobbyBadges();
     gameLoop();
   </script>
