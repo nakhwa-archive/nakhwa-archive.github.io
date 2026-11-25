@@ -559,11 +559,23 @@
     <!-- 1. 게임 목록 로비 화면 -->
     <section id="lobbyView" class="lobby-view">
       <div class="lobby-intro">
-        <h2>🎮 미니게임 선택 (총 12종)</h2>
+        <h2>🎮 미니게임 선택 (총 13종)</h2>
         <p>원하는 게임을 선택해 길드원들과 랭킹을 겨뤄보세요!</p>
       </div>
 
       <div class="game-grid">
+        <button type="button" class="game-card" data-game="racer">
+          <div class="game-icon-box">🏎️</div>
+          <div class="game-card-body">
+            <div class="game-card-top">
+              <span class="game-card-title">낙화 터보 레이서</span>
+              <span class="game-best-badge" id="badgeRacer">BEST 0점</span>
+            </div>
+            <p class="game-card-desc">4차선 고속도로 질주 & 니트로 부스터로 차량 추월!</p>
+          </div>
+          <span class="game-arrow">▶</span>
+        </button>
+
         <button type="button" class="game-card" data-game="enhance">
           <div class="game-icon-box">🔨</div>
           <div class="game-card-body">
@@ -782,7 +794,7 @@
 
     let isInPlayScreen = false;
     let isGameFullscreen = false;
-    let activeGame = "enhance";
+    let activeGame = "racer";
     const GROUND_Y = 170;
     let petals = [];
 
@@ -3406,10 +3418,9 @@
     let enhanceHammerAngle = 0;
     let enhanceShake = 0;
     let enhanceSparks = [];
-    let enhanceEndReason = ""; // "destroyed" | "sold"
+    let enhanceEndReason = "";
 
     function getEnhanceRates(lv) {
-      // lv에 따른 성공 / 유지(하락) / 파괴 확률(%)
       if (lv <= 3) return { success: 100, keep: 0, down: 0, destroy: 0 };
       if (lv === 4) return { success: 85, keep: 15, down: 0, destroy: 0 };
       if (lv === 5) return { success: 75, keep: 20, down: 5, destroy: 0 };
@@ -3429,7 +3440,6 @@
 
     function calcEnhanceValue(lv) {
       if (lv <= 0) return 0;
-      // 고강화일수록 기하급수적 점수 가치
       return Math.round(lv * 100 + Math.pow(lv, 2.35) * 45);
     }
 
@@ -3486,7 +3496,6 @@
       enhanceHammerAngle = 1.0;
 
       if (roll < rates.success) {
-        // 강화 성공!
         enhanceLv++;
         if (enhanceLv > enhanceMaxLvThisRun) enhanceMaxLvThisRun = enhanceLv;
         enhanceResultBanner = `✨ 강화 성공! (+${enhanceLv}강 달성)`;
@@ -3495,14 +3504,12 @@
         enhanceShake = 6;
         spawnEnhanceSparks("#ffd166", 18);
       } else if (roll < rates.success + rates.keep) {
-        // 등급 유지
         enhanceResultBanner = `🛡️ 강화 실패 (등급 유지 +${enhanceLv}강)`;
         enhanceResultColor = "#9898a6";
         enhanceBannerTimer = 55;
         enhanceShake = 3;
         spawnEnhanceSparks("#9898a6", 8);
       } else if (roll < rates.success + rates.keep + rates.down) {
-        // 단계 하락
         enhanceLv = Math.max(0, enhanceLv - 1);
         enhanceResultBanner = `⬇️ 강화 실패! 단계 하락 (+${enhanceLv}강)`;
         enhanceResultColor = "#ffd166";
@@ -3510,12 +3517,10 @@
         enhanceShake = 8;
         spawnEnhanceSparks("#ff8ca5", 12);
       } else {
-        // 무기 파괴!
         enhanceShake = 16;
         spawnEnhanceSparks("#ff4d6d", 32);
         enhanceOver = true;
         enhanceEndReason = "destroyed";
-        // 파괴 시에도 이번 판에 달성했던 최고 강화 가치의 30% 위로금 점수 인정
         enhanceScore = Math.round(calcEnhanceValue(enhanceMaxLvThisRun) * 0.3);
         const isNewBest = enhanceScore > enhanceBest;
         if (isNewBest) {
@@ -3554,7 +3559,6 @@
       const rates = getEnhanceRates(enhanceLv);
       const currentVal = calcEnhanceValue(enhanceLv);
 
-      // 1) 상단 HUD
       ctx.fillStyle = "#f4f4f6";
       ctx.font = "bold 13px sans-serif";
       ctx.textAlign = "left";
@@ -3570,7 +3574,6 @@
       ctx.fillStyle = "#ffd166";
       ctx.fillText(`+${enhanceLv} ${spec.title}`, 326, 37);
 
-      // 2) 대장간 화로 & 오라 배경
       const cx = 170;
       const cy = 185;
       const pulse = 1 + Math.sin(performance.now() * 0.006) * 0.08;
@@ -3584,7 +3587,6 @@
       ctx.arc(cx, cy, auraRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // 모루(Anvil) 그리기
       ctx.fillStyle = "#2b2d38";
       ctx.beginPath();
       ctx.moveTo(120, 248);
@@ -3596,13 +3598,11 @@
       ctx.fillRect(148, 266, 44, 16);
       ctx.fillRect(130, 282, 80, 10);
 
-      // 3) 무기(검) 렌더링 (파괴 시 산산조각)
       if (!enhanceOver || enhanceEndReason !== "destroyed") {
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(-Math.PI / 4);
 
-        // 검신 (Blade)
         ctx.fillStyle = spec.blade;
         ctx.beginPath();
         ctx.moveTo(-7, 25);
@@ -3613,17 +3613,14 @@
         ctx.closePath();
         ctx.fill();
 
-        // 검신 중앙 홈 & 광택
         ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
         ctx.fillRect(-1.5, -56, 3, 76);
 
-        // 코등이 (Guard)
         ctx.fillStyle = spec.guard;
         ctx.beginPath();
         ctx.roundRect(-20, 24, 40, 8, 4);
         ctx.fill();
 
-        // 손잡이 (Hilt)
         ctx.fillStyle = "#3a2e28";
         ctx.fillRect(-5, 32, 10, 24);
         ctx.fillStyle = spec.guard;
@@ -3634,7 +3631,6 @@
         ctx.restore();
       }
 
-      // 대장장이 망치 휘두르기 연출
       if (enhanceHammerAngle > 0.02) {
         ctx.save();
         ctx.translate(225, 195);
@@ -3647,7 +3643,6 @@
         enhanceHammerAngle *= 0.82;
       }
 
-      // 4) 강화 확률표 패널
       ctx.fillStyle = "rgba(20, 20, 26, 0.85)";
       ctx.beginPath();
       ctx.roundRect(16, 298, 308, 42, 8);
@@ -3667,7 +3662,6 @@
       ctx.fillStyle = rates.destroy > 0 ? "#ff4d6d" : "#64748b";
       ctx.fillText(`파괴 ${rates.destroy}%`, 272, 323);
 
-      // 5) 하단 액션 버튼 2개 (좌: 강화하기 / 우: 판매 확정)
       ctx.fillStyle = "#e65c7b";
       ctx.beginPath();
       ctx.roundRect(16, 348, 186, 48, 10);
@@ -3692,7 +3686,6 @@
       ctx.font = "600 10px sans-serif";
       ctx.fillText(`${currentVal}점`, 267, 385);
 
-      // 6) 결과 배너 & 스파크 파티클
       if (enhanceBannerTimer > 0) {
         enhanceBannerTimer--;
         ctx.fillStyle = enhanceResultColor;
@@ -3749,8 +3742,381 @@
       ctx.restore();
     }
 
+    /* ---------- 13. 낙화 터보 레이서 (Arcade Racing) 상태 ---------- */
+    const RACER_ROAD = { left: 46, right: 294, lanes: 4 };
+    const RACER_LANE_W = (RACER_ROAD.right - RACER_ROAD.left) / RACER_ROAD.lanes;
+    const RACER_TRAFFIC_COLORS = ["#4ea8de", "#ffd166", "#a8d5ba", "#b5179e", "#f77f00"];
+
+    let racerRunning = false;
+    let racerOver = false;
+    let racerScore = 0;
+    let racerLastScore = 0;
+    let racerBest = Number(localStorage.getItem("nakhwaRacerBest") || 0);
+    let racerSessionHadBest = false;
+
+    let racerSpeed = 4.6;
+    let racerRoadOffset = 0;
+    let racerNitroTimer = 0; // > 0 이면 무적 초고속 부스터
+    let racerFrame = 0;
+    let racerDragging = false;
+    let racerLastDragX = 0;
+
+    const racerCar = {
+      x: 170,
+      y: 350,
+      w: 26,
+      h: 44,
+      steerSpeed: 4.8
+    };
+
+    let racerTraffic = [];
+    let racerPickups = [];
+    let racerParticles = [];
+
+    function getRacerLaneCenterX(laneIdx) {
+      return RACER_ROAD.left + RACER_LANE_W * (laneIdx + 0.5);
+    }
+
+    function resetRacer() {
+      racerCar.x = getRacerLaneCenterX(1);
+      racerCar.y = 350;
+      racerTraffic = [];
+      racerPickups = [];
+      racerParticles = [];
+      racerScore = 0;
+      racerSpeed = 4.6;
+      racerRoadOffset = 0;
+      racerNitroTimer = 0;
+      racerFrame = 0;
+      racerOver = false;
+      racerRunning = true;
+      racerDragging = false;
+      racerSessionHadBest = false;
+      isNewBestPending = false;
+      hideSubmitBar();
+    }
+
+    function spawnRacerWave() {
+      // 4차선 중 1~2개 차선에만 차량 배치 (항상 피할 통로 2개 이상 보장)
+      const lanes = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+      const count = racerScore > 450 && Math.random() < 0.45 ? 2 : 1;
+
+      for (let i = 0; i < count; i++) {
+        const lane = lanes[i];
+        const color = RACER_TRAFFIC_COLORS[Math.floor(Math.random() * RACER_TRAFFIC_COLORS.length)];
+        const relSpeed = 1.6 + Math.random() * 1.4;
+        racerTraffic.push({
+          x: getRacerLaneCenterX(lane),
+          y: -55 - i * 18,
+          w: 26,
+          h: 44,
+          color,
+          relSpeed,
+          blasted: false,
+          vx: 0,
+          vy: 0
+        });
+      }
+
+      // 비어 있는 차선 중 하나에 일정 확률로 니트로 부스터 스폰
+      if (Math.random() < 0.22) {
+        const freeLane = lanes[count];
+        racerPickups.push({
+          x: getRacerLaneCenterX(freeLane),
+          y: -50
+        });
+      }
+    }
+
+    function spawnRacerBurst(x, y, color) {
+      for (let i = 0; i < 12; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const spd = 1.5 + Math.random() * 3.8;
+        racerParticles.push({
+          x,
+          y,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          r: 2.5 + Math.random() * 2,
+          color,
+          life: 24
+        });
+      }
+    }
+
+    function drawCarSprite(x, y, w, h, bodyColor, isPlayer, isNitro) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // 타이어 4개
+      ctx.fillStyle = "#0b0b0e";
+      ctx.fillRect(-w / 2 - 2.5, -h / 2 + 6, 3, 9);
+      ctx.fillRect(w / 2 - 0.5, -h / 2 + 6, 3, 9);
+      ctx.fillRect(-w / 2 - 2.5, h / 2 - 15, 3, 9);
+      ctx.fillRect(w / 2 - 0.5, h / 2 - 15, 3, 9);
+
+      // 차체
+      ctx.fillStyle = bodyColor;
+      ctx.beginPath();
+      ctx.roundRect(-w / 2, -h / 2, w, h, 6);
+      ctx.fill();
+
+      // 앞유리 & 뒷유리
+      ctx.fillStyle = "#181820";
+      ctx.beginPath();
+      ctx.roundRect(-w / 2 + 4, -h / 2 + 10, w - 8, 10, 2);
+      ctx.fill();
+      ctx.fillRect(-w / 2 + 5, h / 2 - 12, w - 10, 6);
+
+      if (isPlayer) {
+        // 레이싱 스트라이프
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(-2, -h / 2 + 1, 4, 8);
+        ctx.fillRect(-2, h / 2 - 6, 4, 5);
+
+        // 헤드라이트 불빛
+        ctx.fillStyle = "rgba(255, 243, 176, 0.35)";
+        ctx.beginPath();
+        ctx.moveTo(-w / 2 + 4, -h / 2);
+        ctx.lineTo(-w / 2 - 4, -h / 2 - 26);
+        ctx.lineTo(-2, -h / 2 - 26);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(w / 2 - 4, -h / 2);
+        ctx.lineTo(w / 2 + 4, -h / 2 - 26);
+        ctx.lineTo(2, -h / 2 - 26);
+        ctx.closePath();
+        ctx.fill();
+
+        // 배기 불꽃 (니트로 시 거대화)
+        ctx.fillStyle = isNitro ? "#72efdd" : "#ffd166";
+        const flameH = isNitro ? 14 + (racerFrame % 4) * 3 : 5 + (racerFrame % 3) * 2;
+        ctx.fillRect(-5, h / 2, 4, flameH);
+        ctx.fillRect(1, h / 2, 4, flameH);
+      } else {
+        // 일반 차량 테일램프
+        ctx.fillStyle = "#ff4d6d";
+        ctx.fillRect(-w / 2 + 3, h / 2 - 3, 5, 2.5);
+        ctx.fillRect(w / 2 - 8, h / 2 - 3, 5, 2.5);
+      }
+
+      ctx.restore();
+    }
+
+    function drawRacerFrame() {
+      const isNitro = racerNitroTimer > 0;
+      const curSpeed = isNitro ? racerSpeed * 1.65 : racerSpeed;
+
+      if (racerRunning && !racerOver) {
+        racerFrame++;
+        if (racerNitroTimer > 0) racerNitroTimer--;
+
+        racerScore += isNitro ? 0.45 : 0.2;
+        racerSpeed = Math.min(9.5, 4.6 + racerScore * 0.0028);
+        racerRoadOffset = (racerRoadOffset + curSpeed * 1.8) % 36;
+
+        // PC 좌우 조향
+        if (dodgeKeys.left) racerCar.x -= racerCar.steerSpeed;
+        if (dodgeKeys.right) racerCar.x += racerCar.steerSpeed;
+        const minX = RACER_ROAD.left + racerCar.w / 2 + 3;
+        const maxX = RACER_ROAD.right - racerCar.w / 2 - 3;
+        racerCar.x = Math.max(minX, Math.min(maxX, racerCar.x));
+
+        // 적 차량 스폰 간격
+        const topCar = racerTraffic[racerTraffic.length - 1];
+        const spawnGap = Math.max(115, 165 - racerScore * 0.03);
+        if (!topCar || topCar.y > spawnGap) {
+          spawnRacerWave();
+        }
+
+        // 니트로 아이템 업데이트
+        for (let i = racerPickups.length - 1; i >= 0; i--) {
+          const p = racerPickups[i];
+          p.y += curSpeed * 1.25;
+          if (Math.hypot(p.x - racerCar.x, p.y - racerCar.y) < 26) {
+            racerNitroTimer = 180; // 3초간 무적 니트로 질주
+            racerScore += 120;
+            spawnRacerBurst(p.x, p.y, "#72efdd");
+            racerPickups.splice(i, 1);
+            continue;
+          }
+          if (p.y > canvas.height + 20) racerPickups.splice(i, 1);
+        }
+
+        // 라이벌 차량 업데이트 & 충돌 판정
+        for (let i = racerTraffic.length - 1; i >= 0; i--) {
+          const c = racerTraffic[i];
+          if (c.blasted) {
+            c.x += c.vx;
+            c.y += c.vy;
+            if (c.y < -80 || c.y > canvas.height + 80) racerTraffic.splice(i, 1);
+            continue;
+          }
+
+          c.y += curSpeed - c.relSpeed * 0.35;
+
+          const hitX = Math.abs(c.x - racerCar.x) < (c.w + racerCar.w) * 0.42;
+          const hitY = Math.abs(c.y - racerCar.y) < (c.h + racerCar.h) * 0.42;
+
+          if (hitX && hitY) {
+            if (isNitro) {
+              // 니트로 상태면 앞차를 들이받아 날려버림!
+              c.blasted = true;
+              c.vx = (c.x >= racerCar.x ? 1 : -1) * 7.5;
+              c.vy = -8.5;
+              racerScore += 80;
+              spawnRacerBurst(c.x, c.y, "#ffd166");
+            } else {
+              racerOver = true;
+              racerLastScore = Math.floor(racerScore);
+              spawnRacerBurst(racerCar.x, racerCar.y, "#ff4d6d");
+              const isNewBest = racerLastScore > racerBest;
+              if (isNewBest) {
+                racerBest = racerLastScore;
+                localStorage.setItem("nakhwaRacerBest", String(racerBest));
+              }
+              triggerGameOver(isNewBest, racerLastScore > 0);
+              break;
+            }
+          }
+
+          if (c.y > canvas.height + 60) {
+            racerTraffic.splice(i, 1);
+          }
+        }
+      }
+
+      // 1) 도로 좌우 야경 잔디 & 연석(빨강/흰색 경계석)
+      ctx.fillStyle = "#12151c";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const curbH = 18;
+      for (let y = -curbH + (racerRoadOffset % (curbH * 2)); y < canvas.height; y += curbH) {
+        const isRed = Math.floor((y - racerRoadOffset) / curbH) % 2 === 0;
+        ctx.fillStyle = isRed ? "#e65c7b" : "#f4f4f6";
+        ctx.fillRect(RACER_ROAD.left - 6, y, 6, curbH);
+        ctx.fillRect(RACER_ROAD.right, y, 6, curbH);
+      }
+
+      // 아스팔트 도로 본체
+      ctx.fillStyle = "#1d1e26";
+      ctx.fillRect(RACER_ROAD.left, 0, RACER_ROAD.right - RACER_ROAD.left, canvas.height);
+
+      // 차선 점선 3줄
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([18, 18]);
+      ctx.lineDashOffset = -racerRoadOffset;
+      for (let l = 1; l < RACER_ROAD.lanes; l++) {
+        const lx = RACER_ROAD.left + RACER_LANE_W * l;
+        ctx.beginPath();
+        ctx.moveTo(lx, 0);
+        ctx.lineTo(lx, canvas.height);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      // 니트로 발동 시 화면 양옆 스피드 라인 연출
+      if (isNitro && !racerOver) {
+        ctx.strokeStyle = "rgba(114, 239, 221, 0.35)";
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 6; i++) {
+          const sx = i < 3 ? 12 + i * 10 : canvas.width - 12 - (i - 3) * 10;
+          const sy = ((racerFrame * 18 + i * 65) % canvas.height);
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sx, sy + 28);
+          ctx.stroke();
+        }
+      }
+
+      // 2) 니트로 아이템 렌더링
+      for (const p of racerPickups) {
+        ctx.fillStyle = "#72efdd";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#121216";
+        ctx.font = "900 11px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("⚡", p.x, p.y + 0.5);
+      }
+      ctx.textBaseline = "alphabetic";
+
+      // 3) 라이벌 차량 & 플레이어 차량 렌더링
+      for (const c of racerTraffic) {
+        drawCarSprite(c.x, c.y, c.w, c.h, c.color, false, false);
+      }
+
+      if (!racerOver) {
+        drawCarSprite(
+          racerCar.x,
+          racerCar.y,
+          racerCar.w,
+          racerCar.h,
+          isNitro ? "#72efdd" : "#e65c7b",
+          true,
+          isNitro
+        );
+      }
+
+      // 4) 파편 파티클
+      for (let i = racerParticles.length - 1; i >= 0; i--) {
+        const pt = racerParticles[i];
+        pt.x += pt.vx;
+        pt.y += pt.vy;
+        pt.life--;
+        ctx.fillStyle = pt.color;
+        ctx.globalAlpha = Math.max(0, pt.life / 24);
+        ctx.fillRect(pt.x, pt.y, pt.r, pt.r);
+        ctx.globalAlpha = 1;
+        if (pt.life <= 0) racerParticles.splice(i, 1);
+      }
+
+      // 5) 상단 HUD
+      ctx.fillStyle = "rgba(15, 15, 18, 0.72)";
+      ctx.fillRect(0, 0, canvas.width, 44);
+
+      ctx.fillStyle = "#f4f4f6";
+      ctx.font = "bold 13px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(`SCORE ${Math.floor(racerScore)}`, 12, 21);
+
+      const kmh = Math.round(curSpeed * 32);
+      ctx.fillStyle = isNitro ? "#72efdd" : "#ff8ca5";
+      ctx.font = "bold 11px sans-serif";
+      ctx.fillText(isNitro ? `⚡ NITRO ${kmh} km/h` : `${kmh} km/h`, 12, 36);
+
+      ctx.fillStyle = "#9898a6";
+      ctx.textAlign = "right";
+      ctx.fillText(`BEST ${racerBest}`, 328, 21);
+      ctx.fillText("4차선 질주", 328, 36);
+
+      if (racerOver) {
+        ctx.fillStyle = "rgba(15, 15, 18, 0.8)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#f4f4f6";
+        ctx.font = "bold 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`🏎️ 충돌! 최종 ${racerLastScore}점`, canvas.width / 2, 190);
+        if (isNewBestPending) {
+          ctx.fillStyle = "#ffd166";
+          ctx.font = "bold 13px sans-serif";
+          ctx.fillText("🎉 신기록! 아래에서 기록을 등록해 주세요", canvas.width / 2, 220);
+        } else {
+          ctx.fillStyle = "#ff8ca5";
+          ctx.font = "600 13px sans-serif";
+          ctx.fillText("화면을 터치하면 다시 출발합니다", canvas.width / 2, 220);
+        }
+      }
+    }
+
     /* ---------- 로비 <-> 플레이 화면 전환 (브라우저 뒤로가기 지원) ---------- */
     function updateLobbyBadges() {
+      document.getElementById("badgeRacer").textContent = `BEST ${racerBest}점`;
       document.getElementById("badgeEnhance").textContent = `BEST ${enhanceBest}점`;
       document.getElementById("badgeSnake").textContent = `BEST ${snakeBest}점`;
       document.getElementById("badgeBrick").textContent = `BEST ${brickBest}점`;
@@ -3777,10 +4143,12 @@
       brickRunning = false;
       snakeRunning = false;
       enhanceRunning = false;
+      racerRunning = false;
       smashState = "idle";
       dodgePointerActive = false;
       galagaDragging = false;
       brickDragging = false;
+      racerDragging = false;
       snakeSwipeStart = null;
       gogunHolding = false;
       gogunHoldFrames = 0;
@@ -3829,10 +4197,15 @@
       lobbyView.classList.add("hidden");
       playView.classList.add("active");
 
-      const tallGames = ["suika", "smash", "galaga", "punch", "brick", "snake", "enhance"];
+      const tallGames = ["suika", "smash", "galaga", "punch", "brick", "snake", "enhance", "racer"];
       setCanvasResolution(tallGames.includes(game));
 
-      if (game === "enhance") {
+      if (game === "racer") {
+        playGameTitle.textContent = "🏎️ 낙화 터보 레이서";
+        easterHint.textContent = "좌우 드래그(모바일) 또는 방향키/AD(PC)로 차량 추월!";
+        rankingTitleEl.textContent = "🏎️ 터보 레이서 TOP 5";
+        resetRacer();
+      } else if (game === "enhance") {
         playGameTitle.textContent = "🔨 낙화 무기 강화";
         easterHint.textContent = "강화하기(스페이스)로 단계 상승 · 파괴 전 판매 확정(S)으로 점수 획득!";
         rankingTitleEl.textContent = "🔨 낙화 무기 강화 TOP 5";
@@ -3940,7 +4313,12 @@
     function handleCanvasAction() {
       if (!isInPlayScreen || document.activeElement === nickInput) return;
 
-      if (activeGame === "enhance") {
+      if (activeGame === "racer") {
+        if (racerOver || !racerRunning) {
+          if (!canRestartNow()) return;
+          resetRacer();
+        }
+      } else if (activeGame === "enhance") {
         doEnhanceAttempt();
       } else if (activeGame === "snake") {
         if (snakeOver || !snakeRunning) {
@@ -3994,6 +4372,7 @@
 
     /* ---------- Firebase 랭킹 연동 ---------- */
     function getDbNode() {
+      if (activeGame === "racer") return "racer_scores";
       if (activeGame === "enhance") return "enhance_scores";
       if (activeGame === "snake") return "snake_scores";
       if (activeGame === "brick") return "brick_scores";
@@ -4077,7 +4456,8 @@
       }
 
       let currentRecord = 0;
-      if (activeGame === "enhance") currentRecord = enhanceScore;
+      if (activeGame === "racer") currentRecord = racerLastScore;
+      else if (activeGame === "enhance") currentRecord = enhanceScore;
       else if (activeGame === "snake") currentRecord = snakeScore;
       else if (activeGame === "brick") currentRecord = brickScore;
       else if (activeGame === "punch") currentRecord = punchScore;
@@ -4154,6 +4534,18 @@
       e.preventDefault();
       if (!isInPlayScreen) return;
 
+      if (activeGame === "racer") {
+        if (racerOver || !racerRunning) {
+          if (!canRestartNow()) return;
+          resetRacer();
+          return;
+        }
+        racerDragging = true;
+        const rect = canvas.getBoundingClientRect();
+        racerLastDragX = (e.clientX - rect.left) * (canvas.width / rect.width);
+        return;
+      }
+
       if (activeGame === "enhance") {
         if (enhanceOver || !enhanceRunning) {
           if (!canRestartNow()) return;
@@ -4163,7 +4555,6 @@
         const rect = canvas.getBoundingClientRect();
         const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
         const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-        // 하단 우측 판매 확정 버튼 영역 터치 판정
         if (cy >= 340 && cx >= 208) {
           sellEnhanceWeapon();
         } else {
@@ -4259,6 +4650,18 @@
     canvas.addEventListener("pointermove", (e) => {
       if (!isInPlayScreen) return;
 
+      if (activeGame === "racer" && racerDragging && !racerOver) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const curX = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const dx = curX - racerLastDragX;
+        racerLastDragX = curX;
+        const minX = RACER_ROAD.left + racerCar.w / 2 + 3;
+        const maxX = RACER_ROAD.right - racerCar.w / 2 - 3;
+        racerCar.x = Math.max(minX, Math.min(maxX, racerCar.x + dx * 1.15));
+        return;
+      }
+
       if (activeGame === "snake" && snakeSwipeStart && !snakeOver) {
         e.preventDefault();
         const dx = e.clientX - snakeSwipeStart.x;
@@ -4322,6 +4725,7 @@
       dodgePointerActive = false;
       galagaDragging = false;
       brickDragging = false;
+      racerDragging = false;
       snakeSwipeStart = null;
       if (isInPlayScreen && activeGame === "gogun") {
         handleGogunPressEnd();
@@ -4336,6 +4740,7 @@
       dodgePointerActive = false;
       galagaDragging = false;
       brickDragging = false;
+      racerDragging = false;
       snakeSwipeStart = null;
       suikaAiming = false;
       if (isInPlayScreen && activeGame === "gogun") {
@@ -5005,7 +5410,9 @@
       if (isInPlayScreen) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (activeGame === "enhance") {
+        if (activeGame === "racer") {
+          drawRacerFrame();
+        } else if (activeGame === "enhance") {
           drawEnhanceFrame();
         } else if (activeGame === "snake") {
           drawSnakeFrame();
@@ -5081,7 +5488,7 @@
         }
       }
 
-      if (activeGame === "dodge" || activeGame === "suika" || activeGame === "galaga" || activeGame === "brick") {
+      if (activeGame === "dodge" || activeGame === "suika" || activeGame === "galaga" || activeGame === "brick" || activeGame === "racer") {
         if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { e.preventDefault(); dodgeKeys.up = true; }
         if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") { e.preventDefault(); dodgeKeys.down = true; }
         if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
@@ -5094,7 +5501,7 @@
         return;
       }
 
-      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && activeGame !== "snake" && activeGame !== "enhance" && e.key === "ArrowUp")) {
+      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && activeGame !== "snake" && activeGame !== "enhance" && activeGame !== "racer" && e.key === "ArrowUp")) {
         e.preventDefault();
         if (activeGame === "smash" && e.repeat) return;
         handleCanvasAction();
