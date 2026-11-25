@@ -642,11 +642,11 @@
       cursor: pointer;
     }
 
-    /* 미니게임 선택 탭 */
+    /* 미니게임 3종 선택 탭 */
     .game-tabs {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 4px;
       margin-bottom: 10px;
       background: #121216;
       padding: 4px;
@@ -660,10 +660,11 @@
       border-radius: 7px;
       background: transparent;
       color: var(--text-sub);
-      font-size: 0.84rem;
+      font-size: 0.8rem;
       font-weight: 700;
       cursor: pointer;
       transition: all 0.15s ease;
+      white-space: nowrap;
     }
 
     .game-tab-btn.active {
@@ -673,7 +674,7 @@
 
     #gameCanvas {
       width: 100%;
-      height: 190px;
+      height: 195px;
       background: #121216;
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -878,11 +879,12 @@
       </div>
 
       <div class="game-tabs">
-        <button type="button" class="game-tab-btn active" id="tabRunner">🌸 낙화 러너</button>
-        <button type="button" class="game-tab-btn" id="tabSlash">⚔️ 낙화 발도술</button>
+        <button type="button" class="game-tab-btn active" id="tabRunner">🌸 러너</button>
+        <button type="button" class="game-tab-btn" id="tabSlash">⚔️ 발도술</button>
+        <button type="button" class="game-tab-btn" id="tabStack">🍡 경단 쌓기</button>
       </div>
 
-      <canvas id="gameCanvas" width="480" height="190"></canvas>
+      <canvas id="gameCanvas" width="480" height="195"></canvas>
       <p class="easter-hint" id="easterHint">화면 터치 또는 스페이스바(↑)로 점프!</p>
 
       <!-- 기록 등록 바 -->
@@ -1272,14 +1274,15 @@
       overlayEl.classList.toggle("ui-hidden");
     });
 
-    /* =======================================================
-       이스터에그 비밀 오락실 (1. 낙화 러너 / 2. 낙화 발도술)
-       ======================================================= */
+    /* ============================================================
+       이스터에그 비밀 오락실 (1. 낙화 러너 / 2. 낙화 발도술 / 3. 경단 쌓기)
+       ============================================================ */
     const secretTrigger = document.getElementById("secretTrigger");
     const easterModal = document.getElementById("easterModal");
     const btnCloseEaster = document.getElementById("btnCloseEaster");
     const tabRunner = document.getElementById("tabRunner");
     const tabSlash = document.getElementById("tabSlash");
+    const tabStack = document.getElementById("tabStack");
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
     const easterHint = document.getElementById("easterHint");
@@ -1293,7 +1296,7 @@
 
     nickInput.value = localStorage.getItem("nakhwaRunnerNick") || "";
 
-    let activeGame = "runner"; // "runner" | "slash"
+    let activeGame = "runner"; // "runner" | "slash" | "stack"
     let gameAnimId = null;
     let secretTapCount = 0;
     let secretTapTimer = null;
@@ -1309,27 +1312,7 @@
       }
     });
 
-    /* ---------- 1. 낙화 러너 상태 ---------- */
-    let runnerRunning = false;
-    let runnerOver = false;
-    let runnerScore = 0;
-    let runnerLastScore = 0;
-    let runnerBest = Number(localStorage.getItem("nakhwaRunnerBest") || 0);
-    let runnerSpeed = 4.5;
-    let runnerFrame = 0;
-
-    const GROUND_Y = 158;
-    const player = {
-      x: 48,
-      y: GROUND_Y - 28,
-      w: 24,
-      h: 28,
-      vy: 0,
-      gravity: 0.62,
-      jumpPower: -10.8,
-      grounded: true
-    };
-    let obstacles = [];
+    const GROUND_Y = 162;
     let petals = [];
 
     function initPetals() {
@@ -1341,6 +1324,40 @@
         vy: 0.4 + Math.random() * 0.8
       }));
     }
+
+    function drawPetals(moving) {
+      ctx.fillStyle = "rgba(255, 165, 188, 0.45)";
+      petals.forEach(p => {
+        if (moving) {
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < 0) p.x = canvas.width;
+          if (p.y > GROUND_Y) p.y = 0;
+        }
+        ctx.fillRect(p.x, p.y, p.r, p.r);
+      });
+    }
+
+    /* ---------- 1. 낙화 러너 상태 ---------- */
+    let runnerRunning = false;
+    let runnerOver = false;
+    let runnerScore = 0;
+    let runnerLastScore = 0;
+    let runnerBest = Number(localStorage.getItem("nakhwaRunnerBest") || 0);
+    let runnerSpeed = 4.5;
+    let runnerFrame = 0;
+
+    const player = {
+      x: 48,
+      y: GROUND_Y - 28,
+      w: 24,
+      h: 28,
+      vy: 0,
+      gravity: 0.62,
+      jumpPower: -10.8,
+      grounded: true
+    };
+    let obstacles = [];
 
     function resetRunner() {
       player.y = GROUND_Y - player.h;
@@ -1357,8 +1374,7 @@
     }
 
     /* ---------- 2. 낙화 발도술 상태 ---------- */
-    // state: "idle" | "waiting" | "signal" | "result" | "foul"
-    let slashState = "idle";
+    let slashState = "idle"; // "idle" | "waiting" | "signal" | "result" | "foul"
     let slashSignalTime = 0;
     let slashTimer = null;
     let slashReactionMs = 0;
@@ -1378,7 +1394,6 @@
       slashFlashAlpha = 0;
       hideSubmitBar();
 
-      // 1.5초 ~ 4.4초 사이 랜덤 대기 후 베기 신호
       const delay = 1500 + Math.random() * 2900;
       slashTimer = setTimeout(() => {
         if (activeGame !== "slash" || !easterModal.classList.contains("active")) return;
@@ -1392,7 +1407,6 @@
       if (slashState === "idle" || slashState === "result" || slashState === "foul") {
         startSlashRound();
       } else if (slashState === "waiting") {
-        // 신호 뜨기 전에 먼저 누름 -> 부정출발!
         clearTimeout(slashTimer);
         slashState = "foul";
         hideSubmitBar();
@@ -1408,6 +1422,131 @@
         }
         showSubmitBar();
       }
+    }
+
+    /* ---------- 3. 경단 쌓기 (Stack) 상태 ---------- */
+    const DANGO_COLORS = [
+      { fill: "#ffb7c5", stroke: "#ff8ca5" }, // 벚꽃 분홍 경단
+      { fill: "#f4f4f6", stroke: "#d0d0dc" }, // 백설기 흰 경단
+      { fill: "#a8d5ba", stroke: "#7bb894" }  // 쑥 연두 경단
+    ];
+    const STACK_BLOCK_H = 18;
+    const STACK_BASE_Y = 176;
+
+    let stackLayers = [];
+    let stackMoving = null;
+    let stackSliced = [];
+    let stackRunning = false;
+    let stackOver = false;
+    let stackFloors = 0;
+    let stackBest = Number(localStorage.getItem("nakhwaStackBest") || 0);
+    let stackCameraY = 0;
+    let stackPerfectTimer = 0;
+    let stackCombo = 0;
+
+    function resetStack() {
+      const startW = 140;
+      const startX = (canvas.width - startW) / 2;
+      stackLayers = [{
+        x: startX,
+        w: startW,
+        colorIdx: 0
+      }];
+      stackSliced = [];
+      stackFloors = 0;
+      stackCameraY = 0;
+      stackPerfectTimer = 0;
+      stackCombo = 0;
+      stackOver = false;
+      stackRunning = true;
+      hideSubmitBar();
+      initPetals();
+      spawnNextDango();
+    }
+
+    function spawnNextDango() {
+      const prev = stackLayers[stackLayers.length - 1];
+      const dir = stackLayers.length % 2 === 1 ? 1 : -1;
+      const speed = Math.min(7.2, 2.7 + stackFloors * 0.14);
+      stackMoving = {
+        x: dir === 1 ? 30 : canvas.width - prev.w - 30,
+        w: prev.w,
+        dir,
+        speed,
+        colorIdx: stackLayers.length % DANGO_COLORS.length
+      };
+    }
+
+    function handleStackAction() {
+      if (stackOver || !stackRunning) {
+        resetStack();
+        return;
+      }
+      if (!stackMoving) return;
+
+      const prev = stackLayers[stackLayers.length - 1];
+      const curr = stackMoving;
+      const diff = curr.x - prev.x;
+
+      // 오차 4px 이내면 PERFECT 판정!
+      if (Math.abs(diff) <= 4) {
+        stackCombo++;
+        // 연속 퍼펙트 2회 이상이면 폭 살짝 보너스 회복 (최대 150px)
+        const bonusW = stackCombo >= 2 ? Math.min(150, prev.w + 6) : prev.w;
+        const alignedX = prev.x - (bonusW - prev.w) / 2;
+        stackLayers.push({
+          x: alignedX,
+          w: bonusW,
+          colorIdx: curr.colorIdx
+        });
+        stackFloors++;
+        stackPerfectTimer = 28;
+        spawnNextDango();
+        return;
+      }
+
+      stackCombo = 0;
+      const overlapLeft = Math.max(prev.x, curr.x);
+      const overlapRight = Math.min(prev.x + prev.w, curr.x + curr.w);
+      const overlapW = overlapRight - overlapLeft;
+
+      // 완전히 빗나가면 게임 오버
+      if (overlapW <= 2) {
+        stackSliced.push({
+          x: curr.x,
+          y: STACK_BASE_Y - stackLayers.length * STACK_BLOCK_H + stackCameraY,
+          w: curr.w,
+          vy: 0,
+          colorIdx: curr.colorIdx
+        });
+        stackMoving = null;
+        stackOver = true;
+        if (stackFloors > stackBest) {
+          stackBest = stackFloors;
+          localStorage.setItem("nakhwaStackBest", String(stackBest));
+        }
+        if (stackFloors > 0) showSubmitBar();
+        return;
+      }
+
+      // 삐져나온 조각 떨어지는 연출 추가
+      const sliceW = curr.w - overlapW;
+      const sliceX = diff < 0 ? curr.x : overlapRight;
+      stackSliced.push({
+        x: sliceX,
+        y: STACK_BASE_Y - stackLayers.length * STACK_BLOCK_H + stackCameraY,
+        w: sliceW,
+        vy: 0,
+        colorIdx: curr.colorIdx
+      });
+
+      stackLayers.push({
+        x: overlapLeft,
+        w: overlapW,
+        colorIdx: curr.colorIdx
+      });
+      stackFloors++;
+      spawnNextDango();
     }
 
     /* ---------- 공통 UI & 탭 전환 ---------- */
@@ -1428,19 +1567,23 @@
       clearTimeout(slashTimer);
       hideSubmitBar();
 
+      tabRunner.classList.toggle("active", game === "runner");
+      tabSlash.classList.toggle("active", game === "slash");
+      tabStack.classList.toggle("active", game === "stack");
+
       if (game === "runner") {
-        tabRunner.classList.add("active");
-        tabSlash.classList.remove("active");
         easterHint.textContent = "화면 터치 또는 스페이스바(↑)로 점프!";
         rankingTitleEl.textContent = "🏆 낙화 러너 TOP 5";
         resetRunner();
-      } else {
-        tabSlash.classList.add("active");
-        tabRunner.classList.remove("active");
+      } else if (game === "slash") {
         easterHint.textContent = "'⚔️ 베기!!' 신호가 뜨는 순간 가장 빠르게 터치!";
         rankingTitleEl.textContent = "⚡ 낙화 발도술 TOP 5 (빠른 순)";
         initPetals();
         resetSlashToIdle();
+      } else {
+        easterHint.textContent = "타이밍 맞춰 터치! 중앙에 맞추면 PERFECT 🌸";
+        rankingTitleEl.textContent = "🍡 경단 쌓기 TOP 5";
+        resetStack();
       }
 
       fetchLeaderboard();
@@ -1448,6 +1591,7 @@
 
     tabRunner.addEventListener("click", () => switchGameTab("runner"));
     tabSlash.addEventListener("click", () => switchGameTab("slash"));
+    tabStack.addEventListener("click", () => switchGameTab("stack"));
 
     function handleCanvasAction() {
       if (!easterModal.classList.contains("active")) return;
@@ -1462,15 +1606,23 @@
           player.vy = player.jumpPower;
           player.grounded = false;
         }
-      } else {
+      } else if (activeGame === "slash") {
         handleSlashAction();
+      } else {
+        handleStackAction();
       }
     }
 
     /* ---------- Firebase 랭킹 연동 ---------- */
+    function getDbNode() {
+      if (activeGame === "runner") return "runner_scores";
+      if (activeGame === "slash") return "slash_scores";
+      return "stack_scores";
+    }
+
     async function fetchLeaderboard() {
       rankingStatusEl.textContent = "불러오는 중...";
-      const dbNode = activeGame === "runner" ? "runner_scores" : "slash_scores";
+      const dbNode = getDbNode();
 
       try {
         const res = await fetch(`${CONFIG.firebaseDbUrl}/${dbNode}.json`);
@@ -1481,9 +1633,8 @@
           item => item && typeof item.score === "number" && item.score > 0 && item.name
         );
 
-        // 러너는 높은 점수순(내림차순), 발도술은 빠른 반응속도순(오름차순)
         const sorted = validEntries
-          .sort((a, b) => activeGame === "runner" ? (b.score - a.score) : (a.score - b.score))
+          .sort((a, b) => activeGame === "slash" ? (a.score - b.score) : (b.score - a.score))
           .slice(0, 5);
 
         rankingListEl.innerHTML = "";
@@ -1510,9 +1661,13 @@
 
           const scoreSpan = document.createElement("span");
           scoreSpan.className = "rank-score";
-          scoreSpan.textContent = activeGame === "runner"
-            ? `${entry.score}점`
-            : `${(entry.score / 1000).toFixed(3)}초`;
+          if (activeGame === "runner") {
+            scoreSpan.textContent = `${entry.score}점`;
+          } else if (activeGame === "slash") {
+            scoreSpan.textContent = `${(entry.score / 1000).toFixed(3)}초`;
+          } else {
+            scoreSpan.textContent = `${entry.score}층`;
+          }
 
           li.appendChild(left);
           li.appendChild(scoreSpan);
@@ -1531,14 +1686,18 @@
         return;
       }
 
-      const currentRecord = activeGame === "runner" ? runnerLastScore : slashReactionMs;
+      let currentRecord = 0;
+      if (activeGame === "runner") currentRecord = runnerLastScore;
+      else if (activeGame === "slash") currentRecord = slashReactionMs;
+      else currentRecord = stackFloors;
+
       if (currentRecord <= 0) return;
 
       localStorage.setItem("nakhwaRunnerNick", rawName);
       btnSubmitScore.disabled = true;
       btnSubmitScore.textContent = "저장 중...";
 
-      const dbNode = activeGame === "runner" ? "runner_scores" : "slash_scores";
+      const dbNode = getDbNode();
 
       try {
         const safeKey = getSafeKey(rawName);
@@ -1549,9 +1708,9 @@
         const existingData = await existingRes.json();
         const prevScore = existingData && typeof existingData.score === "number" ? existingData.score : 0;
 
-        const isNewRecord = activeGame === "runner"
-          ? (currentRecord > prevScore)
-          : (prevScore === 0 || currentRecord < prevScore);
+        const isNewRecord = activeGame === "slash"
+          ? (prevScore === 0 || currentRecord < prevScore)
+          : (currentRecord > prevScore);
 
         if (isNewRecord) {
           await fetch(url, {
@@ -1565,9 +1724,9 @@
           });
           btnSubmitScore.textContent = "갱신 완료!";
         } else {
-          const prevLabel = activeGame === "runner"
-            ? `${prevScore}점`
-            : `${(prevScore / 1000).toFixed(3)}초`;
+          let prevLabel = `${prevScore}점`;
+          if (activeGame === "slash") prevLabel = `${(prevScore / 1000).toFixed(3)}초`;
+          else if (activeGame === "stack") prevLabel = `${prevScore}층`;
           btnSubmitScore.textContent = `기존 최고 ${prevLabel}`;
         }
 
@@ -1598,6 +1757,7 @@
       easterModal.classList.remove("active");
       document.body.style.overflow = "";
       runnerRunning = false;
+      stackRunning = false;
       clearTimeout(slashTimer);
       if (gameAnimId) {
         cancelAnimationFrame(gameAnimId);
@@ -1615,20 +1775,7 @@
       handleCanvasAction();
     });
 
-    /* ---------- 렌더링 루프 ---------- */
-    function drawPetals(moving) {
-      ctx.fillStyle = "rgba(255, 165, 188, 0.45)";
-      petals.forEach(p => {
-        if (moving) {
-          p.x += p.vx;
-          p.y += p.vy;
-          if (p.x < 0) p.x = canvas.width;
-          if (p.y > GROUND_Y) p.y = 0;
-        }
-        ctx.fillRect(p.x, p.y, p.r, p.r);
-      });
-    }
-
+    /* ---------- 1. 러너 렌더링 ---------- */
     function drawRunnerFrame() {
       drawPetals(runnerRunning && !runnerOver);
 
@@ -1693,7 +1840,6 @@
         }
       }
 
-      // 장애물 그리기
       obstacles.forEach(obs => {
         ctx.fillStyle = "#e65c7b";
         ctx.beginPath();
@@ -1712,7 +1858,6 @@
         ctx.fill();
       });
 
-      // 플레이어 그리기
       const px = Math.round(player.x);
       const py = Math.round(player.y);
       ctx.fillStyle = "#ff9eb5";
@@ -1738,7 +1883,6 @@
         ctx.fillRect(px + 14, py + 24, 5, 4);
       }
 
-      // 점수 표시
       ctx.fillStyle = "#9898a6";
       ctx.font = "bold 13px sans-serif";
       ctx.textAlign = "right";
@@ -1761,14 +1905,13 @@
       }
     }
 
+    /* ---------- 2. 발도술 렌더링 ---------- */
     function drawSamurai(x, y, facingRight, slashed) {
       ctx.save();
       ctx.translate(x, y);
       if (!facingRight) ctx.scale(-1, 1);
 
-      // 도트 검사 실루엣
       ctx.fillStyle = facingRight ? "#ff9eb5" : "#9898a6";
-      // 삿갓
       ctx.beginPath();
       ctx.moveTo(-16, -24);
       ctx.lineTo(0, -34);
@@ -1776,10 +1919,8 @@
       ctx.closePath();
       ctx.fill();
 
-      // 몸통
       ctx.fillRect(-7, -23, 14, 23);
 
-      // 검 & 베기 이펙트
       ctx.strokeStyle = slashed ? "#ffffff" : "#e65c7b";
       ctx.lineWidth = slashed ? 3 : 2;
       ctx.beginPath();
@@ -1795,7 +1936,6 @@
     }
 
     function drawSlashFrame() {
-      // 배경 분위기
       if (slashState === "signal") {
         ctx.fillStyle = "rgba(230, 92, 123, 0.22)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -1803,7 +1943,6 @@
 
       drawPetals(true);
 
-      // 지면선
       ctx.strokeStyle = "#343440";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -1811,13 +1950,11 @@
       ctx.lineTo(canvas.width, GROUND_Y);
       ctx.stroke();
 
-      // 대치 중인 두 검사 (승리 시 자리 교차)
       const isPlayerWin = slashState === "result";
       const isEnemyWin = slashState === "foul";
       drawSamurai(isPlayerWin ? 350 : 120, GROUND_Y, true, isPlayerWin);
       drawSamurai(isEnemyWin ? 130 : 360, GROUND_Y, false, isEnemyWin);
 
-      // 일섬(베기) 가로 섬광 연출
       if (slashFlashAlpha > 0.02) {
         ctx.strokeStyle = `rgba(255, 255, 255, ${slashFlashAlpha})`;
         ctx.lineWidth = 3;
@@ -1828,14 +1965,12 @@
         slashFlashAlpha *= 0.88;
       }
 
-      // 상단 최고 기록
       ctx.fillStyle = "#9898a6";
       ctx.font = "bold 13px sans-serif";
       ctx.textAlign = "right";
       const bestText = slashBestMs > 0 ? `${(slashBestMs / 1000).toFixed(3)}초` : "--.---";
       ctx.fillText(`MY BEST ${bestText}`, canvas.width - 14, 24);
 
-      // 중앙 안내 문구
       ctx.textAlign = "center";
       if (slashState === "idle") {
         ctx.fillStyle = "#f4f4f6";
@@ -1869,13 +2004,112 @@
       }
     }
 
+    /* ---------- 3. 경단 쌓기 렌더링 ---------- */
+    function drawDangoBlock(x, y, w, h, colorIdx) {
+      const palette = DANGO_COLORS[colorIdx % DANGO_COLORS.length];
+      const r = Math.min(8, h / 2, w / 2);
+
+      ctx.fillStyle = palette.fill;
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+      ctx.fill();
+
+      ctx.strokeStyle = palette.stroke;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // 상단 하이라이트 광택
+      if (w > 16) {
+        ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
+        ctx.fillRect(x + 6, y + 3, Math.max(4, w - 12), 2.5);
+      }
+    }
+
+    function drawStackFrame() {
+      drawPetals(true);
+
+      // 5층 이상 쌓이면 카메라 부드럽게 위로 따라감
+      const targetCam = Math.max(0, (stackLayers.length - 5) * STACK_BLOCK_H);
+      stackCameraY += (targetCam - stackCameraY) * 0.15;
+
+      // 꼬치 막대기 (중앙 수직선)
+      const skewerBottom = STACK_BASE_Y + stackCameraY + 12;
+      ctx.strokeStyle = "#8c6d53";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(canvas.width / 2, 18);
+      ctx.lineTo(canvas.width / 2, Math.min(canvas.height, skewerBottom));
+      ctx.stroke();
+
+      // 쌓인 경단 층 그리기
+      stackLayers.forEach((layer, idx) => {
+        const y = STACK_BASE_Y - (idx + 1) * STACK_BLOCK_H + stackCameraY;
+        if (y > canvas.height + 20) return;
+        drawDangoBlock(layer.x, y, layer.w, STACK_BLOCK_H - 1, layer.colorIdx);
+      });
+
+      // 현재 좌우로 움직이는 경단 업데이트 및 그리기
+      if (stackRunning && !stackOver && stackMoving) {
+        stackMoving.x += stackMoving.dir * stackMoving.speed;
+        if (stackMoving.x <= 16) {
+          stackMoving.x = 16;
+          stackMoving.dir = 1;
+        } else if (stackMoving.x + stackMoving.w >= canvas.width - 16) {
+          stackMoving.x = canvas.width - 16 - stackMoving.w;
+          stackMoving.dir = -1;
+        }
+
+        const moveY = STACK_BASE_Y - (stackLayers.length + 1) * STACK_BLOCK_H + stackCameraY;
+        drawDangoBlock(stackMoving.x, moveY, stackMoving.w, STACK_BLOCK_H - 1, stackMoving.colorIdx);
+      }
+
+      // 잘려 떨어지는 경단 조각 연출
+      for (let i = stackSliced.length - 1; i >= 0; i--) {
+        const s = stackSliced[i];
+        s.vy += 0.45;
+        s.y += s.vy;
+        drawDangoBlock(s.x, s.y, s.w, STACK_BLOCK_H - 1, s.colorIdx);
+        if (s.y > canvas.height + 30) stackSliced.splice(i, 1);
+      }
+
+      // PERFECT 콤보 표시
+      if (stackPerfectTimer > 0) {
+        stackPerfectTimer--;
+        ctx.fillStyle = "#ff8ca5";
+        ctx.font = "900 15px sans-serif";
+        ctx.textAlign = "center";
+        const label = stackCombo >= 2 ? `✨ PERFECT x${stackCombo}! (+폭 회복)` : "✨ PERFECT!";
+        ctx.fillText(label, canvas.width / 2, 42);
+      }
+
+      // 우측 상단 층수 UI
+      ctx.fillStyle = "#9898a6";
+      ctx.font = "bold 13px sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(`BEST ${stackBest}층   현재 ${stackFloors}층`, canvas.width - 14, 24);
+
+      if (stackOver) {
+        ctx.fillStyle = "rgba(15, 15, 18, 0.72)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#f4f4f6";
+        ctx.font = "bold 18px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`🍡 경단 탑 완성 · ${stackFloors}층!`, canvas.width / 2, 86);
+        ctx.fillStyle = "#ff8ca5";
+        ctx.font = "600 13px sans-serif";
+        ctx.fillText("캔버스 터치 또는 스페이스바로 다시 쌓기", canvas.width / 2, 112);
+      }
+    }
+
     function gameLoop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (activeGame === "runner") {
         drawRunnerFrame();
-      } else {
+      } else if (activeGame === "slash") {
         drawSlashFrame();
+      } else {
+        drawStackFrame();
       }
 
       if (easterModal.classList.contains("active")) {
