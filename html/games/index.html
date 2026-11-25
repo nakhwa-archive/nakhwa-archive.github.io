@@ -38,6 +38,11 @@
       padding-bottom: calc(32px + env(safe-area-inset-bottom));
     }
 
+    body.fs-locked {
+      overflow: hidden;
+      padding-bottom: 0;
+    }
+
     header {
       position: sticky;
       top: 0;
@@ -229,6 +234,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 8px;
       margin-bottom: 10px;
       padding-bottom: 10px;
       border-bottom: 1px solid var(--border);
@@ -238,9 +244,19 @@
       font-size: 1rem;
       font-weight: 700;
       color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .back-lobby-btn {
+    .play-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .action-pill-btn {
       background: #24242b;
       border: 1px solid var(--border);
       color: var(--text-main);
@@ -249,11 +265,25 @@
       padding: 5px 10px;
       border-radius: 8px;
       cursor: pointer;
+      white-space: nowrap;
     }
 
-    .back-lobby-btn:active {
+    .action-pill-btn.fs-btn {
+      background: rgba(230, 92, 123, 0.16);
+      border-color: rgba(230, 92, 123, 0.45);
+      color: #ff8ca5;
+    }
+
+    .action-pill-btn:active {
       transform: scale(0.95);
-      border-color: var(--accent);
+    }
+
+    .canvas-stage {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
     }
 
     #gameCanvas {
@@ -272,6 +302,73 @@
     #gameCanvas.tall-mode {
       max-width: 340px;
       height: 410px;
+    }
+
+    /* ===========================
+       전체화면(Fullscreen) 전용 레이아웃
+       =========================== */
+    .arcade-card.is-fullscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      width: 100vw;
+      height: 100dvh;
+      border-radius: 0;
+      border: none;
+      background: #0b0b0e;
+      padding: calc(10px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow-y: auto;
+    }
+
+    .arcade-card.is-fullscreen .play-header-bar {
+      margin-bottom: 6px;
+      padding-bottom: 8px;
+      flex-shrink: 0;
+    }
+
+    .arcade-card.is-fullscreen .canvas-stage {
+      flex: 1;
+      min-height: 0;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 가로형 게임 전체화면 비율 유지 확대 */
+    .arcade-card.is-fullscreen #gameCanvas:not(.tall-mode) {
+      width: 100%;
+      max-width: 960px;
+      height: auto;
+      max-height: 100%;
+      aspect-ratio: 480 / 205;
+    }
+
+    /* 세로형 게임(갤러그/수박/건물) 전체화면 비율 유지 확대 */
+    .arcade-card.is-fullscreen #gameCanvas.tall-mode {
+      width: auto;
+      max-width: 100%;
+      height: 100%;
+      max-height: calc(100dvh - 115px);
+      aspect-ratio: 340 / 410;
+    }
+
+    .arcade-card.is-fullscreen .easter-hint {
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+
+    .arcade-card.is-fullscreen .score-submit-bar {
+      margin-top: 8px;
+      flex-shrink: 0;
+    }
+
+    /* 전체화면일 때는 랭킹 보드를 숨겨 게임 화면 집중 */
+    .arcade-card.is-fullscreen .ranking-board {
+      display: none;
     }
 
     .easter-hint {
@@ -585,13 +682,18 @@
 
     <!-- 2. 게임 플레이 화면 -->
     <section id="playView" class="play-view">
-      <div class="arcade-card">
+      <div class="arcade-card" id="arcadeCard">
         <div class="play-header-bar">
           <span class="play-game-title" id="playGameTitle">🌸 낙화 러너</span>
-          <button type="button" class="back-lobby-btn" id="btnBackToLobby">☰ 게임 목록</button>
+          <div class="play-header-actions">
+            <button type="button" class="action-pill-btn fs-btn" id="btnToggleFullscreen">⛶ 전체화면</button>
+            <button type="button" class="action-pill-btn" id="btnBackToLobby">☰ 목록</button>
+          </div>
         </div>
 
-        <canvas id="gameCanvas" width="480" height="205"></canvas>
+        <div class="canvas-stage">
+          <canvas id="gameCanvas" width="480" height="205"></canvas>
+        </div>
         <p class="easter-hint" id="easterHint">화면 터치 또는 스페이스바(↑)로 점프!</p>
 
         <!-- 기록 등록 바 -->
@@ -628,7 +730,9 @@
 
     const lobbyView = document.getElementById("lobbyView");
     const playView = document.getElementById("playView");
+    const arcadeCard = document.getElementById("arcadeCard");
     const playGameTitle = document.getElementById("playGameTitle");
+    const btnToggleFullscreen = document.getElementById("btnToggleFullscreen");
     const btnBackToLobby = document.getElementById("btnBackToLobby");
 
     const canvas = document.getElementById("gameCanvas");
@@ -646,9 +750,42 @@
     nickInput.value = localStorage.getItem("nakhwaRunnerNick") || "";
 
     let isInPlayScreen = false;
+    let isGameFullscreen = false;
     let activeGame = "galaga";
     const GROUND_Y = 170;
     let petals = [];
+
+    // 전체화면 토글 (브라우저 Fullscreen API + 모바일 CSS 뷰포트 풀스크린 하이브리드)
+    function setGameFullscreen(enable) {
+      isGameFullscreen = enable;
+      arcadeCard.classList.toggle("is-fullscreen", enable);
+      document.body.classList.toggle("fs-locked", enable);
+      btnToggleFullscreen.textContent = enable ? "✕ 축소" : "⛶ 전체화면";
+
+      if (enable) {
+        if (!document.fullscreenElement && arcadeCard.requestFullscreen) {
+          arcadeCard.requestFullscreen().catch(() => {});
+        }
+      } else {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    }
+
+    btnToggleFullscreen.addEventListener("click", () => {
+      setGameFullscreen(!isGameFullscreen);
+    });
+
+    document.addEventListener("fullscreenchange", () => {
+      // 브라우저 기본 ESC 등으로 전체화면이 풀렸을 때 UI 상태 동기화
+      if (!document.fullscreenElement && isGameFullscreen) {
+        isGameFullscreen = false;
+        arcadeCard.classList.remove("is-fullscreen");
+        document.body.classList.remove("fs-locked");
+        btnToggleFullscreen.textContent = "⛶ 전체화면";
+      }
+    });
 
     // 신기록 잠금 & 실수 재시작 방지 쿨타임 상태
     let isNewBestPending = false;
@@ -1759,7 +1896,7 @@
     let galagaBest = Number(localStorage.getItem("nakhwaGalagaBest") || 0);
     let galagaStage = 1;
     let galagaLives = 3;
-    let galagaWeaponLv = 1; // 1 ~ 3연발
+    let galagaWeaponLv = 1;
     let galagaFrame = 0;
     let galagaInvuln = 0;
     let galagaSessionHadBest = false;
@@ -1803,7 +1940,6 @@
 
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          // 0행: 보스 나비(HP 2), 1행: 벚꽃 정예, 2~3행: 일반 돌격병
           const kind = r === 0 ? "boss" : (r === 1 ? "elite" : "grunt");
           const hp = kind === "boss" ? 2 : 1;
           const pts = kind === "boss" ? 150 : (kind === "elite" ? 80 : 40);
@@ -1879,7 +2015,6 @@
     }
 
     function drawGalagaFrame() {
-      // 1) 배경 별 스크롤
       ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
       for (const st of galagaStars) {
         if (galagaRunning && !galagaOver) {
@@ -1896,12 +2031,10 @@
         galagaFrame++;
         if (galagaInvuln > 0) galagaInvuln--;
 
-        // PC 좌우 이동
         if (dodgeKeys.left) galagaShip.x -= galagaShip.speed;
         if (dodgeKeys.right) galagaShip.x += galagaShip.speed;
         galagaShip.x = Math.max(18, Math.min(canvas.width - 18, galagaShip.x));
 
-        // 자동 연사 (12프레임마다)
         if (galagaFrame % 12 === 0) {
           if (galagaWeaponLv === 1) {
             galagaBullets.push({ x: galagaShip.x, y: galagaShip.y - 14, vx: 0, vy: -7.5 });
@@ -1915,7 +2048,6 @@
           }
         }
 
-        // 플레이어 탄환 이동
         for (let i = galagaBullets.length - 1; i >= 0; i--) {
           const b = galagaBullets[i];
           b.x += b.vx;
@@ -1923,7 +2055,6 @@
           if (b.y < -10) galagaBullets.splice(i, 1);
         }
 
-        // 편대 좌우 이동 계산
         const formSpeed = (0.7 + Math.min(1.2, galagaStage * 0.14)) * galagaFormDir;
         let hitEdge = false;
         for (const e of galagaEnemies) {
@@ -1932,7 +2063,6 @@
         }
         if (hitEdge) galagaFormDir *= -1;
 
-        // 주기적으로 적 1기씩 돌격(다이빙) 개시
         const diveInterval = Math.max(45, 115 - galagaStage * 12);
         if (galagaFrame % diveInterval === 0 && galagaEnemies.length > 0) {
           const candidates = galagaEnemies.filter(e => !e.diving && !e.entering);
@@ -1946,7 +2076,6 @@
           }
         }
 
-        // 적 업데이트 & 충돌 체크
         for (let i = galagaEnemies.length - 1; i >= 0; i--) {
           const e = galagaEnemies[i];
 
@@ -1957,12 +2086,10 @@
           } else if (e.diving) {
             e.diveT += 0.014 + galagaStage * 0.0015;
             const t = e.diveT;
-            // S자 곡선 돌격 궤적
             const targetX = e.diveTargetX + Math.sin(t * Math.PI * 2.2) * 55;
             e.x = e.diveStartX * (1 - t) + targetX * t;
             e.y = e.diveStartY + t * (canvas.height - e.diveStartY + 35);
 
-            // 돌격 중 중간 지점에서 적탄 1발 발사
             if (Math.abs(t - 0.35) < 0.015) {
               const ang = Math.atan2(galagaShip.y - e.y, galagaShip.x - e.x);
               const bSpd = 2.8 + Math.min(1.8, galagaStage * 0.25);
@@ -1974,7 +2101,6 @@
               });
             }
 
-            // 화면 아래로 지나가면 다시 상단 편대로 복귀
             if (e.y > canvas.height + 24) {
               e.diving = false;
               e.entering = true;
@@ -1986,12 +2112,10 @@
             e.y = e.homeY + Math.sin(galagaFrame * 0.06 + e.homeX * 0.05) * 2;
           }
 
-          // 플레이어와 적 본체 충돌
           if (Math.hypot(e.x - galagaShip.x, e.y - galagaShip.y) < 17) {
             hitGalagaPlayer();
           }
 
-          // 플레이어 총알과 적 충돌
           for (let bi = galagaBullets.length - 1; bi >= 0; bi--) {
             const b = galagaBullets[bi];
             if (Math.abs(b.x - e.x) < 13 && Math.abs(b.y - e.y) < 11) {
@@ -2009,14 +2133,12 @@
                 const boomColor = e.kind === "boss" ? "#ffd166" : (e.kind === "elite" ? "#ff7999" : "#72efdd");
                 spawnGalagaExplosion(e.x, e.y, boomColor);
 
-                // 12% 확률로 파워업 아이템 드롭
                 if (Math.random() < 0.12 && galagaWeaponLv < 3) {
                   galagaPowerups.push({ x: e.x, y: e.y, vy: 2.0 });
                 }
 
                 galagaEnemies.splice(i, 1);
               } else {
-                // 보스 피격 시 색상 변경 피드백
                 spawnGalagaExplosion(e.x, e.y, "#ffffff");
               }
               break;
@@ -2024,13 +2146,11 @@
           }
         }
 
-        // 다음 스테이지 전환
         if (galagaEnemies.length === 0) {
           galagaStage++;
           spawnGalagaStage(galagaStage);
         }
 
-        // 적 탄환 업데이트
         for (let i = galagaEnemyBullets.length - 1; i >= 0; i--) {
           const eb = galagaEnemyBullets[i];
           eb.x += eb.vx;
@@ -2045,7 +2165,6 @@
           }
         }
 
-        // 파워업 아이템 업데이트
         for (let i = galagaPowerups.length - 1; i >= 0; i--) {
           const p = galagaPowerups[i];
           p.y += p.vy;
@@ -2064,7 +2183,6 @@
         }
       }
 
-      // 2) 적 편대 그리기 (도트 외계 나비/벌레 스타일)
       for (const e of galagaEnemies) {
         ctx.save();
         ctx.translate(e.x, e.y);
@@ -2097,16 +2215,13 @@
         ctx.restore();
       }
 
-      // 3) 플레이어 전투기 그리기 (무적 시 깜빡임)
       if (!galagaOver && (galagaInvuln === 0 || Math.floor(galagaInvuln / 5) % 2 === 0)) {
         const sx = Math.round(galagaShip.x);
         const sy = Math.round(galagaShip.y);
 
-        // 추진 불꽃
         ctx.fillStyle = galagaFrame % 4 < 2 ? "#ff5e84" : "#ffd166";
         ctx.fillRect(sx - 3, sy + 10, 6, 5);
 
-        // 기체 본체 (흰색 + 낙화 핑크 포인트)
         ctx.fillStyle = "#f4f4f6";
         ctx.beginPath();
         ctx.moveTo(sx, sy - 13);
@@ -2122,7 +2237,6 @@
         ctx.fillRect(sx + 8, sy + 2, 3, 6);
       }
 
-      // 4) 총알 & 적탄 & 파워업 & 폭발 파티클
       ctx.fillStyle = "#ff9eb5";
       for (const b of galagaBullets) {
         ctx.fillRect(b.x - 1.5, b.y - 5, 3, 10);
@@ -2159,7 +2273,6 @@
         if (pt.life <= 0) galagaParticles.splice(i, 1);
       }
 
-      // 5) 상단 HUD (점수, 스테이지, 잔여 라이프)
       ctx.textBaseline = "alphabetic";
       ctx.fillStyle = "#f4f4f6";
       ctx.font = "bold 13px sans-serif";
@@ -2238,6 +2351,7 @@
     }
 
     function showLobby() {
+      if (isGameFullscreen) setGameFullscreen(false);
       isInPlayScreen = false;
       stopAllGames();
       hideSubmitBar();
@@ -3334,7 +3448,11 @@
         if (activeGame === "smash" && e.repeat) return;
         handleCanvasAction();
       } else if (e.key === "Escape") {
-        showLobby();
+        if (isGameFullscreen) {
+          setGameFullscreen(false);
+        } else {
+          showLobby();
+        }
       }
     });
 
