@@ -553,11 +553,35 @@
     <!-- 1. 게임 목록 로비 화면 -->
     <section id="lobbyView" class="lobby-view">
       <div class="lobby-intro">
-        <h2>🎮 미니게임 선택 (총 14종)</h2>
+        <h2>🎮 미니게임 선택 (총 16종)</h2>
         <p>원하는 게임을 선택해 길드원들과 랭킹을 겨뤄보세요!</p>
       </div>
 
       <div class="game-grid">
+        <button type="button" class="game-card" data-game="bubble">
+          <div class="game-icon-box">🫧</div>
+          <div class="game-card-body">
+            <div class="game-card-top">
+              <span class="game-card-title">거품 팡팡 버블 팝</span>
+              <span class="game-best-badge" id="badgeBubble">BEST 0점</span>
+            </div>
+            <p class="game-card-desc">같은 색 거품 연쇄 폭발! 30초 순발력 타임어택</p>
+          </div>
+          <span class="game-arrow">▶</span>
+        </button>
+
+        <button type="button" class="game-card" data-game="archery">
+          <div class="game-icon-box">🏹</div>
+          <div class="game-card-body">
+            <div class="game-card-top">
+              <span class="game-card-title">낙화 궁술 명중</span>
+              <span class="game-best-badge" id="badgeArchery">BEST 0점</span>
+            </div>
+            <p class="game-card-desc">바람과 움직임을 읽어 정중앙 불스아이 명중!</p>
+          </div>
+          <span class="game-arrow">▶</span>
+        </button>
+
         <button type="button" class="game-card" data-game="lighthouse">
           <div class="game-icon-box">🔦</div>
           <div class="game-card-body">
@@ -801,7 +825,7 @@
 
     let isInPlayScreen = false;
     let isGameFullscreen = false;
-    let activeGame = "lighthouse";
+    let activeGame = "bubble";
     const GROUND_Y = 170;
     let petals = [];
 
@@ -871,7 +895,7 @@
     }
   </script>
 
-  <!-- 분리된 14개 미니게임 모듈 -->
+  <!-- 분리된 16개 미니게임 모듈 -->
   <script src="./js/game-runner.js"></script>
   <script src="./js/game-slash.js"></script>
   <script src="./js/game-stack.js"></script>
@@ -886,6 +910,8 @@
   <script src="./js/game-enhance.js"></script>
   <script src="./js/game-racer.js"></script>
   <script src="./js/game-lighthouse.js"></script>
+  <script src="./js/game-archery.js"></script>
+  <script src="./js/game-bubble.js"></script>
 
   <!-- 로비 전환, Firebase 랭킹, 입력 & 메인 루프 -->
   <script>
@@ -944,6 +970,8 @@
     });
 
     function updateLobbyBadges() {
+      document.getElementById("badgeBubble").textContent = `BEST ${bubbleBest}점`;
+      document.getElementById("badgeArchery").textContent = `BEST ${archeryBest}점`;
       document.getElementById("badgeLighthouse").textContent = `BEST ${lhBest}점`;
       document.getElementById("badgeRacer").textContent = `BEST ${racerBest}점`;
       document.getElementById("badgeEnhance").textContent = `BEST ${enhanceBest}점`;
@@ -974,6 +1002,8 @@
       enhanceRunning = false;
       racerRunning = false;
       lhRunning = false;
+      archeryRunning = false;
+      bubbleRunning = false;
       smashState = "idle";
       dodgePointerActive = false;
       galagaDragging = false;
@@ -1028,10 +1058,20 @@
       lobbyView.classList.add("hidden");
       playView.classList.add("active");
 
-      const tallGames = ["suika", "smash", "galaga", "punch", "brick", "snake", "enhance", "racer", "lighthouse"];
+      const tallGames = ["suika", "smash", "galaga", "punch", "brick", "snake", "enhance", "racer", "lighthouse", "archery", "bubble"];
       setCanvasResolution(tallGames.includes(game));
 
-      if (game === "lighthouse") {
+      if (game === "bubble") {
+        playGameTitle.textContent = "🫧 거품 팡팡 버블 팝";
+        easterHint.textContent = "같은 색 거품을 연속 터치하면 연쇄 폭발! 가시 거품(💣)은 주의!";
+        rankingTitleEl.textContent = "🫧 버블 팝 TOP 5";
+        resetBubble();
+      } else if (game === "archery") {
+        playGameTitle.textContent = "🏹 낙화 궁술 명중";
+        easterHint.textContent = "터치 또는 스페이스바로 발사! 정중앙 명중 시 화살 +1발!";
+        rankingTitleEl.textContent = "🏹 궁술 명중 TOP 5";
+        resetArchery();
+      } else if (game === "lighthouse") {
         playGameTitle.textContent = "🔦 낙화 등대 수비대";
         easterHint.textContent = "터치·드래그(또는 ←→)로 빛 조준 · 100% 충전 시 섬광탄(스페이스)!";
         rankingTitleEl.textContent = "🔦 등대 수비대 TOP 5";
@@ -1134,7 +1174,14 @@
     function handleCanvasAction() {
       if (!isInPlayScreen || document.activeElement === nickInput) return;
 
-      if (activeGame === "lighthouse") {
+      if (activeGame === "bubble") {
+        if (bubbleOver || !bubbleRunning) {
+          if (!canRestartNow()) return;
+          resetBubble();
+        }
+      } else if (activeGame === "archery") {
+        shootArcheryArrow();
+      } else if (activeGame === "lighthouse") {
         if (lhOver || !lhRunning) {
           if (!canRestartNow()) return;
           resetLighthouse();
@@ -1197,6 +1244,8 @@
     }
 
     function getDbNode() {
+      if (activeGame === "bubble") return "bubble_scores";
+      if (activeGame === "archery") return "archery_scores";
       if (activeGame === "lighthouse") return "lighthouse_scores";
       if (activeGame === "racer") return "racer_scores";
       if (activeGame === "enhance") return "enhance_scores";
@@ -1282,7 +1331,9 @@
       }
 
       let currentRecord = 0;
-      if (activeGame === "lighthouse") currentRecord = lhLastScore;
+      if (activeGame === "bubble") currentRecord = bubbleLastScore;
+      else if (activeGame === "archery") currentRecord = archeryLastScore;
+      else if (activeGame === "lighthouse") currentRecord = lhLastScore;
       else if (activeGame === "racer") currentRecord = racerLastScore;
       else if (activeGame === "enhance") currentRecord = enhanceScore;
       else if (activeGame === "snake") currentRecord = snakeScore;
@@ -1360,6 +1411,14 @@
     canvas.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       if (!isInPlayScreen) return;
+
+      if (activeGame === "bubble") {
+        const rect = canvas.getBoundingClientRect();
+        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+        handleBubbleTap(cx, cy);
+        return;
+      }
 
       if (activeGame === "lighthouse") {
         if (lhOver || !lhRunning) {
@@ -1608,7 +1667,11 @@
       if (isInPlayScreen) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (activeGame === "lighthouse") {
+        if (activeGame === "bubble") {
+          drawBubbleFrame();
+        } else if (activeGame === "archery") {
+          drawArcheryFrame();
+        } else if (activeGame === "lighthouse") {
           drawLighthouseFrame();
         } else if (activeGame === "racer") {
           drawRacerFrame();
@@ -1706,7 +1769,7 @@
         return;
       }
 
-      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && activeGame !== "snake" && activeGame !== "enhance" && activeGame !== "racer" && activeGame !== "lighthouse" && e.key === "ArrowUp")) {
+      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && activeGame !== "snake" && activeGame !== "enhance" && activeGame !== "racer" && activeGame !== "lighthouse" && activeGame !== "bubble" && e.key === "ArrowUp")) {
         e.preventDefault();
         if (activeGame === "smash" && e.repeat) return;
         handleCanvasAction();
