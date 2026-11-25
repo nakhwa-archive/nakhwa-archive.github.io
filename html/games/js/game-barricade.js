@@ -10,7 +10,7 @@ var bcHp = 100;
 var bcAmmo = 8;
 var bcMaxAmmo = 8;
 var bcReloadTimer = 0;
-var bcSpecialType = "normal"; // "normal" | "shotgun" | "pierce"
+var bcSpecialType = "normal";
 var bcSpecialShots = 0;
 var bcWave = 1;
 var bcKills = 0;
@@ -133,7 +133,6 @@ function aimBarricadeAt(px, py) {
   const dx = px - BC_GUN_X;
   const dy = Math.min(-24, py - BC_GUN_Y);
   const rawAngle = Math.atan2(dy, dx);
-  // 좌/우 극단 각도 제한 (-162도 ~ -18도)
   bcAimAngle = Math.max(-2.82, Math.min(-0.32, rawAngle));
 }
 
@@ -145,7 +144,6 @@ function fireBarricadeWeapon() {
   }
   if (bcReloadTimer > 0 || bcFireCooldown > 0) return;
 
-  // 특수 탄약 사용 중일 때
   if (bcSpecialShots > 0) {
     bcSpecialShots--;
     bcFireCooldown = 11;
@@ -184,9 +182,8 @@ function fireBarricadeWeapon() {
     return;
   }
 
-  // 기본 탄약 사격
   if (bcAmmo <= 0) {
-    bcReloadTimer = 42; // 약 0.7초 재장전
+    bcReloadTimer = 42;
     addBcPopup(BC_GUN_X, BC_GUN_Y - 26, "🔄 RELOAD...", "#ffd166");
     return;
   }
@@ -229,23 +226,19 @@ function drawBarricadeFrame() {
       }
     }
 
-    // 키보드 조준 지원
     if (dodgeKeys.left) bcAimAngle = Math.max(-2.82, bcAimAngle - 0.055);
     if (dodgeKeys.right) bcAimAngle = Math.min(-0.32, bcAimAngle + 0.055);
 
-    // 마우스/터치 홀드 연사
     if (bcPointerDown && bcFireCooldown === 0 && bcReloadTimer === 0) {
       fireBarricadeWeapon();
     }
 
-    // 웨이브 및 좀비 스폰
     bcWave = 1 + Math.floor(bcKills / 8);
     const spawnInterval = Math.max(28, 76 - bcWave * 4);
     if (bcFrame % spawnInterval === 0) {
       spawnBcZombie();
     }
 
-    // 탄약 상자 이동 및 획득
     for (let i = bcCrates.length - 1; i >= 0; i--) {
       const cr = bcCrates[i];
       cr.y += cr.vy;
@@ -260,8 +253,7 @@ function drawBarricadeFrame() {
       if (cr.y > BC_BARRICADE_Y - 6) bcCrates.splice(i, 1);
     }
 
-    // 총알 이동 및 충돌
-    for (let bi = bcBullets.length - 1; bi >= 0; i--) {
+    for (let bi = bcBullets.length - 1; bi >= 0; bi--) {
       const b = bcBullets[bi];
       b.x += b.vx;
       b.y += b.vy;
@@ -307,7 +299,6 @@ function drawBarricadeFrame() {
       }
     }
 
-    // 좀비 전진 및 바리케이드 공격
     for (let zi = bcZombies.length - 1; zi >= 0; zi--) {
       const z = bcZombies[zi];
       z.wobble += 0.08;
@@ -338,14 +329,12 @@ function drawBarricadeFrame() {
     }
   }
 
-  // 1) 전장 배경
   ctx.fillStyle = "#111218";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.fillStyle = "#171822";
   ctx.fillRect(0, BC_BARRICADE_Y, canvas.width, canvas.height - BC_BARRICADE_Y);
 
-  // 2) 조준 레이저 가이드
   if (!bcOver) {
     ctx.save();
     ctx.setLineDash([4, 5]);
@@ -361,7 +350,6 @@ function drawBarricadeFrame() {
     ctx.restore();
   }
 
-  // 3) 탄약 상자
   for (const cr of bcCrates) {
     ctx.fillStyle = cr.type === "shotgun" ? "#ffd166" : "#72efdd";
     ctx.beginPath();
@@ -375,7 +363,6 @@ function drawBarricadeFrame() {
   }
   ctx.textBaseline = "alphabetic";
 
-  // 4) 좀비 렌더링
   for (const z of bcZombies) {
     ctx.save();
     ctx.translate(z.x, z.y);
@@ -399,7 +386,6 @@ function drawBarricadeFrame() {
     ctx.restore();
   }
 
-  // 5) 총알 렌더링
   for (const b of bcBullets) {
     ctx.fillStyle = b.color;
     ctx.beginPath();
@@ -407,7 +393,6 @@ function drawBarricadeFrame() {
     ctx.fill();
   }
 
-  // 6) 바리케이드 & 포탑
   ctx.fillStyle = "#3a2e28";
   ctx.fillRect(10, BC_BARRICADE_Y, canvas.width - 20, 12);
   ctx.strokeStyle = bcHp > 35 ? "#e65c7b" : "#ff4d6d";
@@ -426,7 +411,6 @@ function drawBarricadeFrame() {
   ctx.arc(BC_GUN_X, BC_GUN_Y + 6, 12, Math.PI, Math.PI * 2);
   ctx.fill();
 
-  // 7) 파티클 & 팝업
   for (let i = bcParticles.length - 1; i >= 0; i--) {
     const pt = bcParticles[i];
     pt.x += pt.vx;
@@ -452,7 +436,6 @@ function drawBarricadeFrame() {
     if (pop.life <= 0) bcPopups.splice(i, 1);
   }
 
-  // 8) 상단 HUD & 하단 탄창/내구도 바
   ctx.fillStyle = "rgba(15, 15, 18, 0.78)";
   ctx.fillRect(0, 0, canvas.width, 42);
 
