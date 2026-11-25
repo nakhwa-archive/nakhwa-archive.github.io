@@ -426,6 +426,14 @@
       font-weight: 700;
       color: var(--text-main);
       margin-bottom: 4px;
+      cursor: pointer;
+      user-select: none;
+      display: inline-block;
+      transition: transform 0.1s ease;
+    }
+
+    .guild-title:active {
+      transform: scale(0.95);
     }
 
     .guild-title .accent {
@@ -547,7 +555,6 @@
       cursor: not-allowed;
     }
 
-    /* 좋아요 버튼 전용 스타일 */
     .btn-like.liked {
       background: rgba(230, 92, 123, 0.18);
       border-color: var(--accent);
@@ -579,6 +586,80 @@
       transform: translateY(100%);
       opacity: 0;
       pointer-events: none;
+    }
+
+    /* 이스터에그 미니게임 모달 */
+    .easter-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.86);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .easter-modal.active {
+      display: flex;
+    }
+
+    .easter-box {
+      width: 100%;
+      max-width: 520px;
+      background: var(--card-bg);
+      border: 1px solid var(--accent);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 12px 36px rgba(230, 92, 123, 0.25);
+    }
+
+    .easter-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .easter-title {
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .easter-title span {
+      color: var(--accent);
+    }
+
+    .easter-close {
+      background: #26262e;
+      border: 1px solid var(--border);
+      color: var(--text-sub);
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    #runnerCanvas {
+      width: 100%;
+      height: 200px;
+      background: #121216;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      display: block;
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+
+    .easter-hint {
+      margin-top: 10px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-sub);
     }
   </style>
 </head>
@@ -616,7 +697,7 @@
 
     <footer class="guild-footer">
       <button type="button" class="scroll-top-btn" id="btnScrollTop" aria-label="맨 위로 이동">▲</button>
-      <p class="guild-title">⚔️ 메이븐 길드 <span class="accent">[낙화]</span></p>
+      <p class="guild-title" id="secretTrigger">⚔️ 메이븐 길드 <span class="accent">[낙화]</span></p>
       <p class="guild-sub">길드장 김정환 · 가입 문의 환영 🌸</p>
     </footer>
   </main>
@@ -642,6 +723,18 @@
     </div>
   </div>
 
+  <!-- 이스터에그 러너 게임 모달 -->
+  <div id="easterModal" class="easter-modal" role="dialog" aria-modal="true">
+    <div class="easter-box">
+      <div class="easter-top">
+        <div class="easter-title">🌸 비밀 미니게임 · <span>낙화 러너</span></div>
+        <button type="button" class="easter-close" id="btnCloseEaster" aria-label="게임 닫기">✕</button>
+      </div>
+      <canvas id="runnerCanvas" width="480" height="200"></canvas>
+      <p class="easter-hint">화면 터치 또는 스페이스바(↑)로 점프!</p>
+    </div>
+  </div>
+
   <script>
     const CONFIG = {
       owner: "nakhwa-archive",
@@ -651,14 +744,13 @@
       firebaseDbUrl: "https://nakhwa-a90f6-default-rtdb.firebaseio.com"
     };
 
-    // episodes는 항상 1화 -> 최신화 순(정방향)으로 유지 (뷰어 이전/다음 흐름 일관성 유지)
     let episodes = [];
     let likesData = {};
     let myLikedMap = JSON.parse(localStorage.getItem("nakhwaMyLikes") || "{}");
     let currentEpisodeIndex = 0;
     let currentPage = 1;
     let viewMode = localStorage.getItem("comicViewMode") || "grid";
-    let sortOrder = localStorage.getItem("comicSortOrder") || "latest"; // 기본값: 최신화부터 ("latest" | "oldest")
+    let sortOrder = localStorage.getItem("comicSortOrder") || "latest";
 
     const containerEl = document.getElementById("episodeContainer");
     const paginationEl = document.getElementById("pagination");
@@ -718,7 +810,6 @@
     btnListView.addEventListener("click", () => applyViewMode("list"));
     applyViewMode(viewMode);
 
-    // 첫화 보기 / 마지막화 보기 클릭 이벤트
     btnFirstEp.addEventListener("click", () => {
       if (episodes.length > 0) openViewer(0);
     });
@@ -946,7 +1037,6 @@
       overlayEl.classList.remove("active");
       document.body.style.overflow = "";
 
-      // 현재 정렬 기준에 맞춰 닫았을 때 해당 에피소드가 속한 페이지로 이동
       const displayIndex = sortOrder === "latest"
         ? (episodes.length - 1 - currentEpisodeIndex)
         : currentEpisodeIndex;
@@ -1015,7 +1105,302 @@
       overlayEl.classList.toggle("ui-hidden");
     });
 
+    /* ==========================================
+       이스터에그: 낙화 러너 게임 (공룡게임 스타일)
+       ========================================== */
+    const secretTrigger = document.getElementById("secretTrigger");
+    const easterModal = document.getElementById("easterModal");
+    const btnCloseEaster = document.getElementById("btnCloseEaster");
+    const canvas = document.getElementById("runnerCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let secretTapCount = 0;
+    let secretTapTimer = null;
+
+    secretTrigger.addEventListener("click", () => {
+      secretTapCount++;
+      clearTimeout(secretTapTimer);
+      secretTapTimer = setTimeout(() => { secretTapCount = 0; }, 1500);
+
+      if (secretTapCount >= 5) {
+        secretTapCount = 0;
+        openEasterGame();
+      }
+    });
+
+    let gameAnimId = null;
+    let isGameRunning = false;
+    let isGameOver = false;
+    let score = 0;
+    let highScore = Number(localStorage.getItem("nakhwaRunnerBest") || 0);
+    let gameSpeed = 4.5;
+    let frameCount = 0;
+
+    const GROUND_Y = 165;
+    const player = {
+      x: 48,
+      y: GROUND_Y - 28,
+      w: 24,
+      h: 28,
+      vy: 0,
+      gravity: 0.62,
+      jumpPower: -10.8,
+      grounded: true
+    };
+
+    let obstacles = [];
+    let petals = [];
+
+    function initPetals() {
+      petals = Array.from({ length: 14 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * GROUND_Y,
+        r: 2 + Math.random() * 2.5,
+        vx: -(0.6 + Math.random() * 1.2),
+        vy: 0.4 + Math.random() * 0.8
+      }));
+    }
+
+    function resetGame() {
+      player.y = GROUND_Y - player.h;
+      player.vy = 0;
+      player.grounded = true;
+      obstacles = [];
+      score = 0;
+      gameSpeed = 4.5;
+      frameCount = 0;
+      isGameOver = false;
+      isGameRunning = true;
+      initPetals();
+    }
+
+    function jump() {
+      if (!easterModal.classList.contains("active")) return;
+      if (isGameOver) {
+        resetGame();
+        return;
+      }
+      if (!isGameRunning) {
+        resetGame();
+        return;
+      }
+      if (player.grounded) {
+        player.vy = player.jumpPower;
+        player.grounded = false;
+      }
+    }
+
+    function openEasterGame() {
+      easterModal.classList.add("active");
+      document.body.style.overflow = "hidden";
+      resetGame();
+      if (!gameAnimId) gameLoop();
+    }
+
+    function closeEasterGame() {
+      easterModal.classList.remove("active");
+      document.body.style.overflow = "";
+      isGameRunning = false;
+      if (gameAnimId) {
+        cancelAnimationFrame(gameAnimId);
+        gameAnimId = null;
+      }
+    }
+
+    btnCloseEaster.addEventListener("click", closeEasterGame);
+    easterModal.addEventListener("click", (e) => {
+      if (e.target === easterModal) closeEasterGame();
+    });
+
+    canvas.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      jump();
+    });
+
+    function drawPlayer() {
+      const px = Math.round(player.x);
+      const py = Math.round(player.y);
+
+      // 몸통 (도트 스타일 벚꽃 요정/슬라임)
+      ctx.fillStyle = "#ff9eb5";
+      ctx.fillRect(px + 2, py + 4, 20, 20);
+      ctx.fillRect(px + 4, py + 2, 16, 22);
+
+      // 머리 위 벚꽃 핀
+      ctx.fillStyle = "#e65c7b";
+      ctx.fillRect(px + 14, py, 6, 5);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(px + 16, py + 2, 2, 2);
+
+      // 눈
+      ctx.fillStyle = "#18181d";
+      ctx.fillRect(px + 14, py + 10, 3, 4);
+      ctx.fillRect(px + 19, py + 10, 3, 4);
+
+      // 발 (달리기 애니메이션)
+      ctx.fillStyle = "#d94868";
+      const step = isGameOver ? 0 : Math.floor(frameCount / 6) % 2;
+      if (!player.grounded) {
+        ctx.fillRect(px + 5, py + 24, 5, 4);
+        ctx.fillRect(px + 14, py + 22, 5, 4);
+      } else if (step === 0) {
+        ctx.fillRect(px + 4, py + 24, 5, 4);
+        ctx.fillRect(px + 14, py + 24, 5, 2);
+      } else {
+        ctx.fillRect(px + 4, py + 24, 5, 2);
+        ctx.fillRect(px + 14, py + 24, 5, 4);
+      }
+    }
+
+    function drawObstacle(obs) {
+      ctx.fillStyle = "#e65c7b";
+      if (obs.type === "double") {
+        // 2연속 가시 바위
+        ctx.beginPath();
+        ctx.moveTo(obs.x, GROUND_Y);
+        ctx.lineTo(obs.x + obs.w * 0.25, obs.y);
+        ctx.lineTo(obs.x + obs.w * 0.5, GROUND_Y);
+        ctx.lineTo(obs.x + obs.w * 0.75, obs.y + 4);
+        ctx.lineTo(obs.x + obs.w, GROUND_Y);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // 단일 가시 바위
+        ctx.beginPath();
+        ctx.moveTo(obs.x, GROUND_Y);
+        ctx.lineTo(obs.x + obs.w / 2, obs.y);
+        ctx.lineTo(obs.x + obs.w, GROUND_Y);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 배경 벚꽃잎 파티클
+      ctx.fillStyle = "rgba(255, 165, 188, 0.45)";
+      petals.forEach(p => {
+        if (isGameRunning && !isGameOver) {
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < 0) p.x = canvas.width;
+          if (p.y > GROUND_Y) p.y = 0;
+        }
+        ctx.fillRect(p.x, p.y, p.r, p.r);
+      });
+
+      // 바닥선
+      ctx.strokeStyle = "#343440";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.lineTo(canvas.width, GROUND_Y);
+      ctx.stroke();
+
+      if (isGameRunning && !isGameOver) {
+        frameCount++;
+        score += 0.15;
+        gameSpeed = Math.min(9.5, 4.5 + score * 0.004);
+
+        // 점프 물리
+        player.vy += player.gravity;
+        player.y += player.vy;
+        if (player.y >= GROUND_Y - player.h) {
+          player.y = GROUND_Y - player.h;
+          player.vy = 0;
+          player.grounded = true;
+        }
+
+        // 장애물 생성
+        const lastObs = obstacles[obstacles.length - 1];
+        const minGap = 190 + Math.random() * 140;
+        if (!lastObs || canvas.width - lastObs.x > minGap) {
+          if (Math.random() < 0.04) {
+            const isDouble = score > 80 && Math.random() < 0.35;
+            const w = isDouble ? 30 : 18;
+            const h = 22 + Math.floor(Math.random() * 10);
+            obstacles.push({
+              x: canvas.width + 10,
+              y: GROUND_Y - h,
+              w,
+              h,
+              type: isDouble ? "double" : "single"
+            });
+          }
+        }
+
+        // 장애물 이동 및 충돌 체크
+        for (let i = obstacles.length - 1; i >= 0; i--) {
+          const obs = obstacles[i];
+          obs.x -= gameSpeed;
+
+          // 히트박스 살짝 여유 있게 판정
+          const pad = 5;
+          if (
+            player.x + pad < obs.x + obs.w - pad &&
+            player.x + player.w - pad > obs.x + pad &&
+            player.y + pad < obs.y + obs.h &&
+            player.y + player.h - 2 > obs.y + pad
+          ) {
+            isGameOver = true;
+            const finalScore = Math.floor(score);
+            if (finalScore > highScore) {
+              highScore = finalScore;
+              localStorage.setItem("nakhwaRunnerBest", String(highScore));
+            }
+          }
+
+          if (obs.x + obs.w < 0) {
+            obstacles.splice(i, 1);
+          }
+        }
+      }
+
+      obstacles.forEach(drawObstacle);
+      drawPlayer();
+
+      // 점수 UI
+      ctx.fillStyle = "#9898a6";
+      ctx.font = "bold 13px sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(
+        `BEST ${String(highScore).padStart(4, "0")}   SCORE ${String(Math.floor(score)).padStart(4, "0")}`,
+        canvas.width - 14,
+        24
+      );
+
+      // 게임 오버 오버레이
+      if (isGameOver) {
+        ctx.fillStyle = "rgba(15, 15, 18, 0.65)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#f4f4f6";
+        ctx.font = "bold 18px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER 🌸", canvas.width / 2, 92);
+
+        ctx.fillStyle = "#ff8ca5";
+        ctx.font = "600 13px sans-serif";
+        ctx.fillText("터치 또는 스페이스바로 다시 달리기", canvas.width / 2, 118);
+      }
+
+      if (easterModal.classList.contains("active")) {
+        gameAnimId = requestAnimationFrame(gameLoop);
+      }
+    }
+
     document.addEventListener("keydown", (e) => {
+      if (easterModal.classList.contains("active")) {
+        if (e.code === "Space" || e.key === "ArrowUp") {
+          e.preventDefault();
+          jump();
+        } else if (e.key === "Escape") {
+          closeEasterGame();
+        }
+        return;
+      }
+
       if (!overlayEl.classList.contains("active")) return;
       if (e.key === "ArrowLeft" && currentEpisodeIndex > 0) {
         currentEpisodeIndex--;
