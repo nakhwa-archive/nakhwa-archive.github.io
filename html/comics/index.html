@@ -600,6 +600,7 @@
       align-items: center;
       justify-content: center;
       padding: 16px;
+      overflow-y: auto;
     }
 
     .easter-modal.active {
@@ -646,7 +647,7 @@
 
     #runnerCanvas {
       width: 100%;
-      height: 200px;
+      height: 190px;
       background: #121216;
       border: 1px solid var(--border);
       border-radius: 10px;
@@ -656,10 +657,129 @@
     }
 
     .easter-hint {
-      margin-top: 10px;
+      margin-top: 8px;
       text-align: center;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--text-sub);
+    }
+
+    /* 점수 등록 바 (게임 오버 시 노출) */
+    .score-submit-bar {
+      display: none;
+      margin-top: 10px;
+      padding: 10px;
+      background: #141418;
+      border: 1px solid rgba(230, 92, 123, 0.45);
+      border-radius: 10px;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .score-submit-bar.active {
+      display: flex;
+    }
+
+    .nick-input {
+      flex: 1;
+      min-width: 0;
+      height: 36px;
+      background: #1e1e24;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0 10px;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    .nick-input:focus {
+      border-color: var(--accent);
+    }
+
+    .submit-score-btn {
+      height: 36px;
+      padding: 0 14px;
+      background: var(--accent);
+      border: none;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .submit-score-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* 실시간 랭킹 보드 */
+    .ranking-board {
+      margin-top: 12px;
+      background: #141418;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .ranking-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 6px;
+    }
+
+    .ranking-status {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--text-sub);
+    }
+
+    .ranking-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .ranking-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      padding: 4px 6px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .ranking-item.top1 {
+      background: rgba(230, 92, 123, 0.14);
+      color: #ff9eb5;
+      font-weight: 700;
+    }
+
+    .rank-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .rank-name {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .rank-score {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      color: var(--accent);
+      flex-shrink: 0;
     }
   </style>
 </head>
@@ -730,8 +850,23 @@
         <div class="easter-title">🌸 비밀 미니게임 · <span>낙화 러너</span></div>
         <button type="button" class="easter-close" id="btnCloseEaster" aria-label="게임 닫기">✕</button>
       </div>
-      <canvas id="runnerCanvas" width="480" height="200"></canvas>
+      <canvas id="runnerCanvas" width="480" height="190"></canvas>
       <p class="easter-hint">화면 터치 또는 스페이스바(↑)로 점프!</p>
+
+      <!-- 게임 오버 시 점수 등록 바 -->
+      <div class="score-submit-bar" id="scoreSubmitBar">
+        <input type="text" id="nickInput" class="nick-input" maxlength="10" placeholder="길드원 닉네임 (최대 10자)" />
+        <button type="button" id="btnSubmitScore" class="submit-score-btn">기록 등록</button>
+      </div>
+
+      <!-- 실시간 TOP 5 랭킹 -->
+      <div class="ranking-board">
+        <div class="ranking-header">
+          <span>🏆 명예의 전당 TOP 5</span>
+          <span class="ranking-status" id="rankingStatus">불러오는 중...</span>
+        </div>
+        <ul class="ranking-list" id="rankingList"></ul>
+      </div>
     </div>
   </div>
 
@@ -1106,13 +1241,22 @@
     });
 
     /* ==========================================
-       이스터에그: 낙화 러너 게임 (공룡게임 스타일)
+       이스터에그: 낙화 러너 게임 + Firebase 랭킹
        ========================================== */
     const secretTrigger = document.getElementById("secretTrigger");
     const easterModal = document.getElementById("easterModal");
     const btnCloseEaster = document.getElementById("btnCloseEaster");
     const canvas = document.getElementById("runnerCanvas");
     const ctx = canvas.getContext("2d");
+
+    const scoreSubmitBar = document.getElementById("scoreSubmitBar");
+    const nickInput = document.getElementById("nickInput");
+    const btnSubmitScore = document.getElementById("btnSubmitScore");
+    const rankingListEl = document.getElementById("rankingList");
+    const rankingStatusEl = document.getElementById("rankingStatus");
+
+    // 저장된 닉네임 복원
+    nickInput.value = localStorage.getItem("nakhwaRunnerNick") || "";
 
     let secretTapCount = 0;
     let secretTapTimer = null;
@@ -1132,11 +1276,12 @@
     let isGameRunning = false;
     let isGameOver = false;
     let score = 0;
+    let lastRunScore = 0;
     let highScore = Number(localStorage.getItem("nakhwaRunnerBest") || 0);
     let gameSpeed = 4.5;
     let frameCount = 0;
 
-    const GROUND_Y = 165;
+    const GROUND_Y = 158;
     const player = {
       x: 48,
       y: GROUND_Y - 28,
@@ -1171,16 +1316,17 @@
       frameCount = 0;
       isGameOver = false;
       isGameRunning = true;
+      scoreSubmitBar.classList.remove("active");
+      btnSubmitScore.disabled = false;
+      btnSubmitScore.textContent = "기록 등록";
       initPetals();
     }
 
     function jump() {
       if (!easterModal.classList.contains("active")) return;
-      if (isGameOver) {
-        resetGame();
-        return;
-      }
-      if (!isGameRunning) {
+      if (document.activeElement === nickInput) return;
+
+      if (isGameOver || !isGameRunning) {
         resetGame();
         return;
       }
@@ -1190,10 +1336,112 @@
       }
     }
 
+    async function fetchLeaderboard() {
+      rankingStatusEl.textContent = "불러오는 중...";
+      try {
+        const res = await fetch(`${CONFIG.firebaseDbUrl}/runner_scores.json`);
+        if (!res.ok) throw new Error("랭킹 로드 실패");
+        const data = (await res.json()) || {};
+
+        const sorted = Object.values(data)
+          .filter(item => item && typeof item.score === "number" && item.name)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5);
+
+        rankingListEl.innerHTML = "";
+        if (sorted.length === 0) {
+          rankingStatusEl.textContent = "첫 기록의 주인공이 되어보세요!";
+          return;
+        }
+
+        rankingStatusEl.textContent = "실시간 TOP 5";
+        const medals = ["🥇", "🥈", "🥉", "4위", "5위"];
+
+        sorted.forEach((entry, idx) => {
+          const li = document.createElement("li");
+          li.className = `ranking-item ${idx === 0 ? "top1" : ""}`;
+
+          const left = document.createElement("div");
+          left.className = "rank-left";
+          left.innerHTML = `<span>${medals[idx]}</span>`;
+
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "rank-name";
+          nameSpan.textContent = entry.name;
+          left.appendChild(nameSpan);
+
+          const scoreSpan = document.createElement("span");
+          scoreSpan.className = "rank-score";
+          scoreSpan.textContent = `${entry.score}점`;
+
+          li.appendChild(left);
+          li.appendChild(scoreSpan);
+          rankingListEl.appendChild(li);
+        });
+      } catch (err) {
+        rankingStatusEl.textContent = "랭킹 불러오기 실패";
+        console.warn(err);
+      }
+    }
+
+    async function submitRunnerScore() {
+      const rawName = nickInput.value.trim();
+      if (!rawName) {
+        nickInput.focus();
+        return;
+      }
+      if (lastRunScore <= 0) return;
+
+      localStorage.setItem("nakhwaRunnerNick", rawName);
+      btnSubmitScore.disabled = true;
+      btnSubmitScore.textContent = "저장 중...";
+
+      try {
+        const safeKey = getSafeKey(rawName);
+        const encodedKey = encodeURIComponent(safeKey);
+        const url = `${CONFIG.firebaseDbUrl}/runner_scores/${encodedKey}.json`;
+
+        // 기존 동일 닉네임 최고 점수 확인 후 갱신
+        const existingRes = await fetch(url);
+        const existingData = await existingRes.json();
+        const prevScore = existingData && typeof existingData.score === "number" ? existingData.score : 0;
+
+        if (lastRunScore > prevScore) {
+          await fetch(url, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: rawName,
+              score: lastRunScore,
+              updatedAt: Date.now()
+            })
+          });
+          btnSubmitScore.textContent = "갱신 완료!";
+        } else {
+          btnSubmitScore.textContent = `기존 최고 ${prevScore}점`;
+        }
+
+        await fetchLeaderboard();
+      } catch (err) {
+        btnSubmitScore.disabled = false;
+        btnSubmitScore.textContent = "다시 시도";
+        console.warn("점수 저장 실패:", err);
+      }
+    }
+
+    btnSubmitScore.addEventListener("click", submitRunnerScore);
+    nickInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        submitRunnerScore();
+      }
+    });
+
     function openEasterGame() {
       easterModal.classList.add("active");
       document.body.style.overflow = "hidden";
       resetGame();
+      fetchLeaderboard();
       if (!gameAnimId) gameLoop();
     }
 
@@ -1221,23 +1469,19 @@
       const px = Math.round(player.x);
       const py = Math.round(player.y);
 
-      // 몸통 (도트 스타일 벚꽃 요정/슬라임)
       ctx.fillStyle = "#ff9eb5";
       ctx.fillRect(px + 2, py + 4, 20, 20);
       ctx.fillRect(px + 4, py + 2, 16, 22);
 
-      // 머리 위 벚꽃 핀
       ctx.fillStyle = "#e65c7b";
       ctx.fillRect(px + 14, py, 6, 5);
       ctx.fillStyle = "#fff";
       ctx.fillRect(px + 16, py + 2, 2, 2);
 
-      // 눈
       ctx.fillStyle = "#18181d";
       ctx.fillRect(px + 14, py + 10, 3, 4);
       ctx.fillRect(px + 19, py + 10, 3, 4);
 
-      // 발 (달리기 애니메이션)
       ctx.fillStyle = "#d94868";
       const step = isGameOver ? 0 : Math.floor(frameCount / 6) % 2;
       if (!player.grounded) {
@@ -1255,7 +1499,6 @@
     function drawObstacle(obs) {
       ctx.fillStyle = "#e65c7b";
       if (obs.type === "double") {
-        // 2연속 가시 바위
         ctx.beginPath();
         ctx.moveTo(obs.x, GROUND_Y);
         ctx.lineTo(obs.x + obs.w * 0.25, obs.y);
@@ -1265,7 +1508,6 @@
         ctx.closePath();
         ctx.fill();
       } else {
-        // 단일 가시 바위
         ctx.beginPath();
         ctx.moveTo(obs.x, GROUND_Y);
         ctx.lineTo(obs.x + obs.w / 2, obs.y);
@@ -1278,7 +1520,6 @@
     function gameLoop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 배경 벚꽃잎 파티클
       ctx.fillStyle = "rgba(255, 165, 188, 0.45)";
       petals.forEach(p => {
         if (isGameRunning && !isGameOver) {
@@ -1290,7 +1531,6 @@
         ctx.fillRect(p.x, p.y, p.r, p.r);
       });
 
-      // 바닥선
       ctx.strokeStyle = "#343440";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -1303,7 +1543,6 @@
         score += 0.15;
         gameSpeed = Math.min(9.5, 4.5 + score * 0.004);
 
-        // 점프 물리
         player.vy += player.gravity;
         player.y += player.vy;
         if (player.y >= GROUND_Y - player.h) {
@@ -1312,7 +1551,6 @@
           player.grounded = true;
         }
 
-        // 장애물 생성
         const lastObs = obstacles[obstacles.length - 1];
         const minGap = 190 + Math.random() * 140;
         if (!lastObs || canvas.width - lastObs.x > minGap) {
@@ -1330,12 +1568,10 @@
           }
         }
 
-        // 장애물 이동 및 충돌 체크
         for (let i = obstacles.length - 1; i >= 0; i--) {
           const obs = obstacles[i];
           obs.x -= gameSpeed;
 
-          // 히트박스 살짝 여유 있게 판정
           const pad = 5;
           if (
             player.x + pad < obs.x + obs.w - pad &&
@@ -1344,10 +1580,13 @@
             player.y + player.h - 2 > obs.y + pad
           ) {
             isGameOver = true;
-            const finalScore = Math.floor(score);
-            if (finalScore > highScore) {
-              highScore = finalScore;
+            lastRunScore = Math.floor(score);
+            if (lastRunScore > highScore) {
+              highScore = lastRunScore;
               localStorage.setItem("nakhwaRunnerBest", String(highScore));
+            }
+            if (lastRunScore > 0) {
+              scoreSubmitBar.classList.add("active");
             }
           }
 
@@ -1360,7 +1599,6 @@
       obstacles.forEach(drawObstacle);
       drawPlayer();
 
-      // 점수 UI
       ctx.fillStyle = "#9898a6";
       ctx.font = "bold 13px sans-serif";
       ctx.textAlign = "right";
@@ -1370,19 +1608,18 @@
         24
       );
 
-      // 게임 오버 오버레이
       if (isGameOver) {
-        ctx.fillStyle = "rgba(15, 15, 18, 0.65)";
+        ctx.fillStyle = "rgba(15, 15, 18, 0.68)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         ctx.fillStyle = "#f4f4f6";
         ctx.font = "bold 18px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("GAME OVER 🌸", canvas.width / 2, 92);
+        ctx.fillText(`GAME OVER · ${lastRunScore}점 🌸`, canvas.width / 2, 86);
 
         ctx.fillStyle = "#ff8ca5";
         ctx.font = "600 13px sans-serif";
-        ctx.fillText("터치 또는 스페이스바로 다시 달리기", canvas.width / 2, 118);
+        ctx.fillText("캔버스 터치 또는 스페이스바로 다시 달리기", canvas.width / 2, 112);
       }
 
       if (easterModal.classList.contains("active")) {
@@ -1392,6 +1629,10 @@
 
     document.addEventListener("keydown", (e) => {
       if (easterModal.classList.contains("active")) {
+        if (document.activeElement === nickInput) {
+          if (e.key === "Escape") nickInput.blur();
+          return;
+        }
         if (e.code === "Space" || e.key === "ArrowUp") {
           e.preventDefault();
           jump();
