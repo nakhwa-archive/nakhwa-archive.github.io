@@ -159,7 +159,6 @@
       object-fit: cover;
     }
 
-    /* 첫화 / 마지막화 바로보기 바 */
     .quick-read-bar {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -342,7 +341,6 @@
       color: var(--text-sub);
     }
 
-    /* 카드 좋아요 뱃지 */
     .card-like-badge {
       font-size: 0.76rem;
       font-weight: 600;
@@ -512,7 +510,6 @@
       user-select: none;
     }
 
-    /* 뷰어 하단 4버튼 레이아웃 (이전 / 좋아요 / 닫기 / 다음) */
     .viewer-footer {
       position: fixed;
       bottom: 0;
@@ -645,7 +642,36 @@
       cursor: pointer;
     }
 
-    #runnerCanvas {
+    /* 미니게임 선택 탭 */
+    .game-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 10px;
+      background: #121216;
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .game-tab-btn {
+      height: 34px;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-sub);
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .game-tab-btn.active {
+      background: var(--accent);
+      color: #ffffff;
+    }
+
+    #gameCanvas {
       width: 100%;
       height: 190px;
       background: #121216;
@@ -663,7 +689,7 @@
       color: var(--text-sub);
     }
 
-    /* 점수 등록 바 (게임 오버 시 노출) */
+    /* 점수 등록 바 */
     .score-submit-bar {
       display: none;
       margin-top: 10px;
@@ -843,17 +869,23 @@
     </div>
   </div>
 
-  <!-- 이스터에그 러너 게임 모달 -->
+  <!-- 이스터에그 미니게임 모달 -->
   <div id="easterModal" class="easter-modal" role="dialog" aria-modal="true">
     <div class="easter-box">
       <div class="easter-top">
-        <div class="easter-title">🌸 비밀 미니게임 · <span>낙화 러너</span></div>
+        <div class="easter-title">🌸 비밀 오락실 · <span>낙화 미니게임</span></div>
         <button type="button" class="easter-close" id="btnCloseEaster" aria-label="게임 닫기">✕</button>
       </div>
-      <canvas id="runnerCanvas" width="480" height="190"></canvas>
-      <p class="easter-hint">화면 터치 또는 스페이스바(↑)로 점프!</p>
 
-      <!-- 게임 오버 시 점수 등록 바 -->
+      <div class="game-tabs">
+        <button type="button" class="game-tab-btn active" id="tabRunner">🌸 낙화 러너</button>
+        <button type="button" class="game-tab-btn" id="tabSlash">⚔️ 낙화 발도술</button>
+      </div>
+
+      <canvas id="gameCanvas" width="480" height="190"></canvas>
+      <p class="easter-hint" id="easterHint">화면 터치 또는 스페이스바(↑)로 점프!</p>
+
+      <!-- 기록 등록 바 -->
       <div class="score-submit-bar" id="scoreSubmitBar">
         <input type="text" id="nickInput" class="nick-input" maxlength="10" placeholder="길드원 닉네임 (최대 10자)" />
         <button type="button" id="btnSubmitScore" class="submit-score-btn">기록 등록</button>
@@ -862,7 +894,7 @@
       <!-- 실시간 TOP 5 랭킹 -->
       <div class="ranking-board">
         <div class="ranking-header">
-          <span>🏆 명예의 전당 TOP 5</span>
+          <span id="rankingTitle">🏆 낙화 러너 TOP 5</span>
           <span class="ranking-status" id="rankingStatus">불러오는 중...</span>
         </div>
         <ul class="ranking-list" id="rankingList"></ul>
@@ -1240,24 +1272,29 @@
       overlayEl.classList.toggle("ui-hidden");
     });
 
-    /* ==========================================
-       이스터에그: 낙화 러너 게임 + Firebase 랭킹
-       ========================================== */
+    /* =======================================================
+       이스터에그 비밀 오락실 (1. 낙화 러너 / 2. 낙화 발도술)
+       ======================================================= */
     const secretTrigger = document.getElementById("secretTrigger");
     const easterModal = document.getElementById("easterModal");
     const btnCloseEaster = document.getElementById("btnCloseEaster");
-    const canvas = document.getElementById("runnerCanvas");
+    const tabRunner = document.getElementById("tabRunner");
+    const tabSlash = document.getElementById("tabSlash");
+    const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
+    const easterHint = document.getElementById("easterHint");
 
     const scoreSubmitBar = document.getElementById("scoreSubmitBar");
     const nickInput = document.getElementById("nickInput");
     const btnSubmitScore = document.getElementById("btnSubmitScore");
+    const rankingTitleEl = document.getElementById("rankingTitle");
     const rankingListEl = document.getElementById("rankingList");
     const rankingStatusEl = document.getElementById("rankingStatus");
 
-    // 저장된 닉네임 복원
     nickInput.value = localStorage.getItem("nakhwaRunnerNick") || "";
 
+    let activeGame = "runner"; // "runner" | "slash"
+    let gameAnimId = null;
     let secretTapCount = 0;
     let secretTapTimer = null;
 
@@ -1272,14 +1309,14 @@
       }
     });
 
-    let gameAnimId = null;
-    let isGameRunning = false;
-    let isGameOver = false;
-    let score = 0;
-    let lastRunScore = 0;
-    let highScore = Number(localStorage.getItem("nakhwaRunnerBest") || 0);
-    let gameSpeed = 4.5;
-    let frameCount = 0;
+    /* ---------- 1. 낙화 러너 상태 ---------- */
+    let runnerRunning = false;
+    let runnerOver = false;
+    let runnerScore = 0;
+    let runnerLastScore = 0;
+    let runnerBest = Number(localStorage.getItem("nakhwaRunnerBest") || 0);
+    let runnerSpeed = 4.5;
+    let runnerFrame = 0;
 
     const GROUND_Y = 158;
     const player = {
@@ -1292,7 +1329,6 @@
       jumpPower: -10.8,
       grounded: true
     };
-
     let obstacles = [];
     let petals = [];
 
@@ -1306,46 +1342,148 @@
       }));
     }
 
-    function resetGame() {
+    function resetRunner() {
       player.y = GROUND_Y - player.h;
       player.vy = 0;
       player.grounded = true;
       obstacles = [];
-      score = 0;
-      gameSpeed = 4.5;
-      frameCount = 0;
-      isGameOver = false;
-      isGameRunning = true;
-      scoreSubmitBar.classList.remove("active");
-      btnSubmitScore.disabled = false;
-      btnSubmitScore.textContent = "기록 등록";
+      runnerScore = 0;
+      runnerSpeed = 4.5;
+      runnerFrame = 0;
+      runnerOver = false;
+      runnerRunning = true;
+      hideSubmitBar();
       initPetals();
     }
 
-    function jump() {
-      if (!easterModal.classList.contains("active")) return;
-      if (document.activeElement === nickInput) return;
+    /* ---------- 2. 낙화 발도술 상태 ---------- */
+    // state: "idle" | "waiting" | "signal" | "result" | "foul"
+    let slashState = "idle";
+    let slashSignalTime = 0;
+    let slashTimer = null;
+    let slashReactionMs = 0;
+    let slashBestMs = Number(localStorage.getItem("nakhwaSlashBest") || 0);
+    let slashFlashAlpha = 0;
 
-      if (isGameOver || !isGameRunning) {
-        resetGame();
-        return;
-      }
-      if (player.grounded) {
-        player.vy = player.jumpPower;
-        player.grounded = false;
+    function resetSlashToIdle() {
+      clearTimeout(slashTimer);
+      slashState = "idle";
+      slashFlashAlpha = 0;
+      hideSubmitBar();
+    }
+
+    function startSlashRound() {
+      clearTimeout(slashTimer);
+      slashState = "waiting";
+      slashFlashAlpha = 0;
+      hideSubmitBar();
+
+      // 1.5초 ~ 4.4초 사이 랜덤 대기 후 베기 신호
+      const delay = 1500 + Math.random() * 2900;
+      slashTimer = setTimeout(() => {
+        if (activeGame !== "slash" || !easterModal.classList.contains("active")) return;
+        slashState = "signal";
+        slashSignalTime = performance.now();
+        slashFlashAlpha = 1;
+      }, delay);
+    }
+
+    function handleSlashAction() {
+      if (slashState === "idle" || slashState === "result" || slashState === "foul") {
+        startSlashRound();
+      } else if (slashState === "waiting") {
+        // 신호 뜨기 전에 먼저 누름 -> 부정출발!
+        clearTimeout(slashTimer);
+        slashState = "foul";
+        hideSubmitBar();
+      } else if (slashState === "signal") {
+        const diff = Math.round(performance.now() - slashSignalTime);
+        slashReactionMs = Math.max(1, diff);
+        slashState = "result";
+        slashFlashAlpha = 1;
+
+        if (slashBestMs === 0 || slashReactionMs < slashBestMs) {
+          slashBestMs = slashReactionMs;
+          localStorage.setItem("nakhwaSlashBest", String(slashBestMs));
+        }
+        showSubmitBar();
       }
     }
 
+    /* ---------- 공통 UI & 탭 전환 ---------- */
+    function hideSubmitBar() {
+      scoreSubmitBar.classList.remove("active");
+      btnSubmitScore.disabled = false;
+      btnSubmitScore.textContent = "기록 등록";
+    }
+
+    function showSubmitBar() {
+      scoreSubmitBar.classList.add("active");
+      btnSubmitScore.disabled = false;
+      btnSubmitScore.textContent = "기록 등록";
+    }
+
+    function switchGameTab(game) {
+      activeGame = game;
+      clearTimeout(slashTimer);
+      hideSubmitBar();
+
+      if (game === "runner") {
+        tabRunner.classList.add("active");
+        tabSlash.classList.remove("active");
+        easterHint.textContent = "화면 터치 또는 스페이스바(↑)로 점프!";
+        rankingTitleEl.textContent = "🏆 낙화 러너 TOP 5";
+        resetRunner();
+      } else {
+        tabSlash.classList.add("active");
+        tabRunner.classList.remove("active");
+        easterHint.textContent = "'⚔️ 베기!!' 신호가 뜨는 순간 가장 빠르게 터치!";
+        rankingTitleEl.textContent = "⚡ 낙화 발도술 TOP 5 (빠른 순)";
+        initPetals();
+        resetSlashToIdle();
+      }
+
+      fetchLeaderboard();
+    }
+
+    tabRunner.addEventListener("click", () => switchGameTab("runner"));
+    tabSlash.addEventListener("click", () => switchGameTab("slash"));
+
+    function handleCanvasAction() {
+      if (!easterModal.classList.contains("active")) return;
+      if (document.activeElement === nickInput) return;
+
+      if (activeGame === "runner") {
+        if (runnerOver || !runnerRunning) {
+          resetRunner();
+          return;
+        }
+        if (player.grounded) {
+          player.vy = player.jumpPower;
+          player.grounded = false;
+        }
+      } else {
+        handleSlashAction();
+      }
+    }
+
+    /* ---------- Firebase 랭킹 연동 ---------- */
     async function fetchLeaderboard() {
       rankingStatusEl.textContent = "불러오는 중...";
+      const dbNode = activeGame === "runner" ? "runner_scores" : "slash_scores";
+
       try {
-        const res = await fetch(`${CONFIG.firebaseDbUrl}/runner_scores.json`);
+        const res = await fetch(`${CONFIG.firebaseDbUrl}/${dbNode}.json`);
         if (!res.ok) throw new Error("랭킹 로드 실패");
         const data = (await res.json()) || {};
 
-        const sorted = Object.values(data)
-          .filter(item => item && typeof item.score === "number" && item.name)
-          .sort((a, b) => b.score - a.score)
+        const validEntries = Object.values(data).filter(
+          item => item && typeof item.score === "number" && item.score > 0 && item.name
+        );
+
+        // 러너는 높은 점수순(내림차순), 발도술은 빠른 반응속도순(오름차순)
+        const sorted = validEntries
+          .sort((a, b) => activeGame === "runner" ? (b.score - a.score) : (a.score - b.score))
           .slice(0, 5);
 
         rankingListEl.innerHTML = "";
@@ -1372,7 +1510,9 @@
 
           const scoreSpan = document.createElement("span");
           scoreSpan.className = "rank-score";
-          scoreSpan.textContent = `${entry.score}점`;
+          scoreSpan.textContent = activeGame === "runner"
+            ? `${entry.score}점`
+            : `${(entry.score / 1000).toFixed(3)}초`;
 
           li.appendChild(left);
           li.appendChild(scoreSpan);
@@ -1384,41 +1524,51 @@
       }
     }
 
-    async function submitRunnerScore() {
+    async function submitScore() {
       const rawName = nickInput.value.trim();
       if (!rawName) {
         nickInput.focus();
         return;
       }
-      if (lastRunScore <= 0) return;
+
+      const currentRecord = activeGame === "runner" ? runnerLastScore : slashReactionMs;
+      if (currentRecord <= 0) return;
 
       localStorage.setItem("nakhwaRunnerNick", rawName);
       btnSubmitScore.disabled = true;
       btnSubmitScore.textContent = "저장 중...";
 
+      const dbNode = activeGame === "runner" ? "runner_scores" : "slash_scores";
+
       try {
         const safeKey = getSafeKey(rawName);
         const encodedKey = encodeURIComponent(safeKey);
-        const url = `${CONFIG.firebaseDbUrl}/runner_scores/${encodedKey}.json`;
+        const url = `${CONFIG.firebaseDbUrl}/${dbNode}/${encodedKey}.json`;
 
-        // 기존 동일 닉네임 최고 점수 확인 후 갱신
         const existingRes = await fetch(url);
         const existingData = await existingRes.json();
         const prevScore = existingData && typeof existingData.score === "number" ? existingData.score : 0;
 
-        if (lastRunScore > prevScore) {
+        const isNewRecord = activeGame === "runner"
+          ? (currentRecord > prevScore)
+          : (prevScore === 0 || currentRecord < prevScore);
+
+        if (isNewRecord) {
           await fetch(url, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               name: rawName,
-              score: lastRunScore,
+              score: currentRecord,
               updatedAt: Date.now()
             })
           });
           btnSubmitScore.textContent = "갱신 완료!";
         } else {
-          btnSubmitScore.textContent = `기존 최고 ${prevScore}점`;
+          const prevLabel = activeGame === "runner"
+            ? `${prevScore}점`
+            : `${(prevScore / 1000).toFixed(3)}초`;
+          btnSubmitScore.textContent = `기존 최고 ${prevLabel}`;
         }
 
         await fetchLeaderboard();
@@ -1429,26 +1579,26 @@
       }
     }
 
-    btnSubmitScore.addEventListener("click", submitRunnerScore);
+    btnSubmitScore.addEventListener("click", submitScore);
     nickInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        submitRunnerScore();
+        submitScore();
       }
     });
 
     function openEasterGame() {
       easterModal.classList.add("active");
       document.body.style.overflow = "hidden";
-      resetGame();
-      fetchLeaderboard();
+      switchGameTab(activeGame);
       if (!gameAnimId) gameLoop();
     }
 
     function closeEasterGame() {
       easterModal.classList.remove("active");
       document.body.style.overflow = "";
-      isGameRunning = false;
+      runnerRunning = false;
+      clearTimeout(slashTimer);
       if (gameAnimId) {
         cancelAnimationFrame(gameAnimId);
         gameAnimId = null;
@@ -1462,67 +1612,14 @@
 
     canvas.addEventListener("pointerdown", (e) => {
       e.preventDefault();
-      jump();
+      handleCanvasAction();
     });
 
-    function drawPlayer() {
-      const px = Math.round(player.x);
-      const py = Math.round(player.y);
-
-      ctx.fillStyle = "#ff9eb5";
-      ctx.fillRect(px + 2, py + 4, 20, 20);
-      ctx.fillRect(px + 4, py + 2, 16, 22);
-
-      ctx.fillStyle = "#e65c7b";
-      ctx.fillRect(px + 14, py, 6, 5);
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(px + 16, py + 2, 2, 2);
-
-      ctx.fillStyle = "#18181d";
-      ctx.fillRect(px + 14, py + 10, 3, 4);
-      ctx.fillRect(px + 19, py + 10, 3, 4);
-
-      ctx.fillStyle = "#d94868";
-      const step = isGameOver ? 0 : Math.floor(frameCount / 6) % 2;
-      if (!player.grounded) {
-        ctx.fillRect(px + 5, py + 24, 5, 4);
-        ctx.fillRect(px + 14, py + 22, 5, 4);
-      } else if (step === 0) {
-        ctx.fillRect(px + 4, py + 24, 5, 4);
-        ctx.fillRect(px + 14, py + 24, 5, 2);
-      } else {
-        ctx.fillRect(px + 4, py + 24, 5, 2);
-        ctx.fillRect(px + 14, py + 24, 5, 4);
-      }
-    }
-
-    function drawObstacle(obs) {
-      ctx.fillStyle = "#e65c7b";
-      if (obs.type === "double") {
-        ctx.beginPath();
-        ctx.moveTo(obs.x, GROUND_Y);
-        ctx.lineTo(obs.x + obs.w * 0.25, obs.y);
-        ctx.lineTo(obs.x + obs.w * 0.5, GROUND_Y);
-        ctx.lineTo(obs.x + obs.w * 0.75, obs.y + 4);
-        ctx.lineTo(obs.x + obs.w, GROUND_Y);
-        ctx.closePath();
-        ctx.fill();
-      } else {
-        ctx.beginPath();
-        ctx.moveTo(obs.x, GROUND_Y);
-        ctx.lineTo(obs.x + obs.w / 2, obs.y);
-        ctx.lineTo(obs.x + obs.w, GROUND_Y);
-        ctx.closePath();
-        ctx.fill();
-      }
-    }
-
-    function gameLoop() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+    /* ---------- 렌더링 루프 ---------- */
+    function drawPetals(moving) {
       ctx.fillStyle = "rgba(255, 165, 188, 0.45)";
       petals.forEach(p => {
-        if (isGameRunning && !isGameOver) {
+        if (moving) {
           p.x += p.vx;
           p.y += p.vy;
           if (p.x < 0) p.x = canvas.width;
@@ -1530,6 +1627,10 @@
         }
         ctx.fillRect(p.x, p.y, p.r, p.r);
       });
+    }
+
+    function drawRunnerFrame() {
+      drawPetals(runnerRunning && !runnerOver);
 
       ctx.strokeStyle = "#343440";
       ctx.lineWidth = 2;
@@ -1538,10 +1639,10 @@
       ctx.lineTo(canvas.width, GROUND_Y);
       ctx.stroke();
 
-      if (isGameRunning && !isGameOver) {
-        frameCount++;
-        score += 0.15;
-        gameSpeed = Math.min(9.5, 4.5 + score * 0.004);
+      if (runnerRunning && !runnerOver) {
+        runnerFrame++;
+        runnerScore += 0.15;
+        runnerSpeed = Math.min(9.5, 4.5 + runnerScore * 0.004);
 
         player.vy += player.gravity;
         player.y += player.vy;
@@ -1555,7 +1656,7 @@
         const minGap = 190 + Math.random() * 140;
         if (!lastObs || canvas.width - lastObs.x > minGap) {
           if (Math.random() < 0.04) {
-            const isDouble = score > 80 && Math.random() < 0.35;
+            const isDouble = runnerScore > 80 && Math.random() < 0.35;
             const w = isDouble ? 30 : 18;
             const h = 22 + Math.floor(Math.random() * 10);
             obstacles.push({
@@ -1570,7 +1671,7 @@
 
         for (let i = obstacles.length - 1; i >= 0; i--) {
           const obs = obstacles[i];
-          obs.x -= gameSpeed;
+          obs.x -= runnerSpeed;
 
           const pad = 5;
           if (
@@ -1579,47 +1680,202 @@
             player.y + pad < obs.y + obs.h &&
             player.y + player.h - 2 > obs.y + pad
           ) {
-            isGameOver = true;
-            lastRunScore = Math.floor(score);
-            if (lastRunScore > highScore) {
-              highScore = lastRunScore;
-              localStorage.setItem("nakhwaRunnerBest", String(highScore));
+            runnerOver = true;
+            runnerLastScore = Math.floor(runnerScore);
+            if (runnerLastScore > runnerBest) {
+              runnerBest = runnerLastScore;
+              localStorage.setItem("nakhwaRunnerBest", String(runnerBest));
             }
-            if (lastRunScore > 0) {
-              scoreSubmitBar.classList.add("active");
-            }
+            if (runnerLastScore > 0) showSubmitBar();
           }
 
-          if (obs.x + obs.w < 0) {
-            obstacles.splice(i, 1);
-          }
+          if (obs.x + obs.w < 0) obstacles.splice(i, 1);
         }
       }
 
-      obstacles.forEach(drawObstacle);
-      drawPlayer();
+      // 장애물 그리기
+      obstacles.forEach(obs => {
+        ctx.fillStyle = "#e65c7b";
+        ctx.beginPath();
+        if (obs.type === "double") {
+          ctx.moveTo(obs.x, GROUND_Y);
+          ctx.lineTo(obs.x + obs.w * 0.25, obs.y);
+          ctx.lineTo(obs.x + obs.w * 0.5, GROUND_Y);
+          ctx.lineTo(obs.x + obs.w * 0.75, obs.y + 4);
+          ctx.lineTo(obs.x + obs.w, GROUND_Y);
+        } else {
+          ctx.moveTo(obs.x, GROUND_Y);
+          ctx.lineTo(obs.x + obs.w / 2, obs.y);
+          ctx.lineTo(obs.x + obs.w, GROUND_Y);
+        }
+        ctx.closePath();
+        ctx.fill();
+      });
 
+      // 플레이어 그리기
+      const px = Math.round(player.x);
+      const py = Math.round(player.y);
+      ctx.fillStyle = "#ff9eb5";
+      ctx.fillRect(px + 2, py + 4, 20, 20);
+      ctx.fillRect(px + 4, py + 2, 16, 22);
+      ctx.fillStyle = "#e65c7b";
+      ctx.fillRect(px + 14, py, 6, 5);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(px + 16, py + 2, 2, 2);
+      ctx.fillStyle = "#18181d";
+      ctx.fillRect(px + 14, py + 10, 3, 4);
+      ctx.fillRect(px + 19, py + 10, 3, 4);
+      ctx.fillStyle = "#d94868";
+      const step = runnerOver ? 0 : Math.floor(runnerFrame / 6) % 2;
+      if (!player.grounded) {
+        ctx.fillRect(px + 5, py + 24, 5, 4);
+        ctx.fillRect(px + 14, py + 22, 5, 4);
+      } else if (step === 0) {
+        ctx.fillRect(px + 4, py + 24, 5, 4);
+        ctx.fillRect(px + 14, py + 24, 5, 2);
+      } else {
+        ctx.fillRect(px + 4, py + 24, 5, 2);
+        ctx.fillRect(px + 14, py + 24, 5, 4);
+      }
+
+      // 점수 표시
       ctx.fillStyle = "#9898a6";
       ctx.font = "bold 13px sans-serif";
       ctx.textAlign = "right";
       ctx.fillText(
-        `BEST ${String(highScore).padStart(4, "0")}   SCORE ${String(Math.floor(score)).padStart(4, "0")}`,
+        `BEST ${String(runnerBest).padStart(4, "0")}   SCORE ${String(Math.floor(runnerScore)).padStart(4, "0")}`,
         canvas.width - 14,
         24
       );
 
-      if (isGameOver) {
+      if (runnerOver) {
         ctx.fillStyle = "rgba(15, 15, 18, 0.68)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
         ctx.fillStyle = "#f4f4f6";
         ctx.font = "bold 18px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText(`GAME OVER · ${lastRunScore}점 🌸`, canvas.width / 2, 86);
-
+        ctx.fillText(`GAME OVER · ${runnerLastScore}점 🌸`, canvas.width / 2, 86);
         ctx.fillStyle = "#ff8ca5";
         ctx.font = "600 13px sans-serif";
         ctx.fillText("캔버스 터치 또는 스페이스바로 다시 달리기", canvas.width / 2, 112);
+      }
+    }
+
+    function drawSamurai(x, y, facingRight, slashed) {
+      ctx.save();
+      ctx.translate(x, y);
+      if (!facingRight) ctx.scale(-1, 1);
+
+      // 도트 검사 실루엣
+      ctx.fillStyle = facingRight ? "#ff9eb5" : "#9898a6";
+      // 삿갓
+      ctx.beginPath();
+      ctx.moveTo(-16, -24);
+      ctx.lineTo(0, -34);
+      ctx.lineTo(16, -24);
+      ctx.closePath();
+      ctx.fill();
+
+      // 몸통
+      ctx.fillRect(-7, -23, 14, 23);
+
+      // 검 & 베기 이펙트
+      ctx.strokeStyle = slashed ? "#ffffff" : "#e65c7b";
+      ctx.lineWidth = slashed ? 3 : 2;
+      ctx.beginPath();
+      if (slashed) {
+        ctx.moveTo(8, -14);
+        ctx.lineTo(38, -26);
+      } else {
+        ctx.moveTo(-4, -10);
+        ctx.lineTo(16, -6);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawSlashFrame() {
+      // 배경 분위기
+      if (slashState === "signal") {
+        ctx.fillStyle = "rgba(230, 92, 123, 0.22)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      drawPetals(true);
+
+      // 지면선
+      ctx.strokeStyle = "#343440";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, GROUND_Y);
+      ctx.lineTo(canvas.width, GROUND_Y);
+      ctx.stroke();
+
+      // 대치 중인 두 검사 (승리 시 자리 교차)
+      const isPlayerWin = slashState === "result";
+      const isEnemyWin = slashState === "foul";
+      drawSamurai(isPlayerWin ? 350 : 120, GROUND_Y, true, isPlayerWin);
+      drawSamurai(isEnemyWin ? 130 : 360, GROUND_Y, false, isEnemyWin);
+
+      // 일섬(베기) 가로 섬광 연출
+      if (slashFlashAlpha > 0.02) {
+        ctx.strokeStyle = `rgba(255, 255, 255, ${slashFlashAlpha})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(40, GROUND_Y - 18);
+        ctx.lineTo(canvas.width - 40, GROUND_Y - 22);
+        ctx.stroke();
+        slashFlashAlpha *= 0.88;
+      }
+
+      // 상단 최고 기록
+      ctx.fillStyle = "#9898a6";
+      ctx.font = "bold 13px sans-serif";
+      ctx.textAlign = "right";
+      const bestText = slashBestMs > 0 ? `${(slashBestMs / 1000).toFixed(3)}초` : "--.---";
+      ctx.fillText(`MY BEST ${bestText}`, canvas.width - 14, 24);
+
+      // 중앙 안내 문구
+      ctx.textAlign = "center";
+      if (slashState === "idle") {
+        ctx.fillStyle = "#f4f4f6";
+        ctx.font = "bold 17px sans-serif";
+        ctx.fillText("⚔️ 낙화 발도술 승부", canvas.width / 2, 74);
+        ctx.fillStyle = "#ff8ca5";
+        ctx.font = "600 13px sans-serif";
+        ctx.fillText("화면 터치 또는 스페이스바로 대결 시작", canvas.width / 2, 100);
+      } else if (slashState === "waiting") {
+        ctx.fillStyle = "#9898a6";
+        ctx.font = "bold 20px sans-serif";
+        ctx.fillText("기다려...", canvas.width / 2, 84);
+      } else if (slashState === "signal") {
+        ctx.fillStyle = "#ff5e84";
+        ctx.font = "900 30px sans-serif";
+        ctx.fillText("⚔️ 베기!!", canvas.width / 2, 88);
+      } else if (slashState === "foul") {
+        ctx.fillStyle = "#ff6b6b";
+        ctx.font = "bold 18px sans-serif";
+        ctx.fillText("🚫 너무 빨랐습니다! (부정출발)", canvas.width / 2, 74);
+        ctx.fillStyle = "#9898a6";
+        ctx.font = "600 13px sans-serif";
+        ctx.fillText("터치하여 재도전", canvas.width / 2, 100);
+      } else if (slashState === "result") {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "900 24px sans-serif";
+        ctx.fillText(`⚡ ${(slashReactionMs / 1000).toFixed(3)}초 (${slashReactionMs}ms)`, canvas.width / 2, 74);
+        ctx.fillStyle = "#ff8ca5";
+        ctx.font = "600 13px sans-serif";
+        ctx.fillText("터치하여 다시 대결하기", canvas.width / 2, 100);
+      }
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (activeGame === "runner") {
+        drawRunnerFrame();
+      } else {
+        drawSlashFrame();
       }
 
       if (easterModal.classList.contains("active")) {
@@ -1635,7 +1891,7 @@
         }
         if (e.code === "Space" || e.key === "ArrowUp") {
           e.preventDefault();
-          jump();
+          handleCanvasAction();
         } else if (e.key === "Escape") {
           closeEasterGame();
         }
