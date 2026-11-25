@@ -40,6 +40,10 @@
 
     body.fs-locked {
       overflow: hidden;
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
       padding-bottom: 0;
     }
 
@@ -284,11 +288,10 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
     }
 
     #gameCanvas {
-      width: 100%;
-      height: 220px;
       background: #121216;
       border: 1px solid var(--border);
       border-radius: 12px;
@@ -299,20 +302,18 @@
       margin: 0 auto;
     }
 
-    #gameCanvas.tall-mode {
-      max-width: 340px;
-      height: 410px;
-    }
-
     /* ===========================
-       전체화면(Fullscreen) 전용 레이아웃
+       모든 디바이스 호환 고정비율 전체화면
        =========================== */
     .arcade-card.is-fullscreen {
       position: fixed;
-      inset: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       z-index: 3000;
-      width: 100vw;
-      height: 100dvh;
+      width: 100%;
+      height: 100%;
       border-radius: 0;
       border: none;
       background: #0b0b0e;
@@ -320,7 +321,7 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      overflow-y: auto;
+      overflow: hidden;
     }
 
     .arcade-card.is-fullscreen .play-header-bar {
@@ -338,24 +339,6 @@
       justify-content: center;
     }
 
-    /* 가로형 게임 전체화면 비율 유지 확대 */
-    .arcade-card.is-fullscreen #gameCanvas:not(.tall-mode) {
-      width: 100%;
-      max-width: 960px;
-      height: auto;
-      max-height: 100%;
-      aspect-ratio: 480 / 205;
-    }
-
-    /* 세로형 게임(갤러그/수박/건물) 전체화면 비율 유지 확대 */
-    .arcade-card.is-fullscreen #gameCanvas.tall-mode {
-      width: auto;
-      max-width: 100%;
-      height: 100%;
-      max-height: calc(100dvh - 115px);
-      aspect-ratio: 340 / 410;
-    }
-
     .arcade-card.is-fullscreen .easter-hint {
       margin-top: 6px;
       flex-shrink: 0;
@@ -366,7 +349,6 @@
       flex-shrink: 0;
     }
 
-    /* 전체화면일 때는 랭킹 보드를 숨겨 게임 화면 집중 */
     .arcade-card.is-fullscreen .ranking-board {
       display: none;
     }
@@ -691,7 +673,7 @@
           </div>
         </div>
 
-        <div class="canvas-stage">
+        <div class="canvas-stage" id="canvasStage">
           <canvas id="gameCanvas" width="480" height="205"></canvas>
         </div>
         <p class="easter-hint" id="easterHint">화면 터치 또는 스페이스바(↑)로 점프!</p>
@@ -731,6 +713,7 @@
     const lobbyView = document.getElementById("lobbyView");
     const playView = document.getElementById("playView");
     const arcadeCard = document.getElementById("arcadeCard");
+    const canvasStage = document.getElementById("canvasStage");
     const playGameTitle = document.getElementById("playGameTitle");
     const btnToggleFullscreen = document.getElementById("btnToggleFullscreen");
     const btnBackToLobby = document.getElementById("btnBackToLobby");
@@ -755,36 +738,64 @@
     const GROUND_Y = 170;
     let petals = [];
 
-    // 전체화면 토글 (브라우저 Fullscreen API + 모바일 CSS 뷰포트 풀스크린 하이브리드)
+    // 고정 종횡비 및 고정 내부 해상도 관리 (모든 기기에서 100% 동일 비율 보장)
+    const GAME_ASPECT = {
+      wide: { w: 480, h: 205 },
+      tall: { w: 340, h: 410 }
+    };
+    let currentAspect = GAME_ASPECT.tall;
+
+    function fitCanvasExactAspect() {
+      if (!isInPlayScreen) return;
+
+      const aspectRatio = currentAspect.w / currentAspect.h;
+
+      if (isGameFullscreen) {
+        // 전체화면에서는 가용한 스테이지 영역(너비/높이) 안에 정확히 같은 비율로 최대 확대
+        const stageW = Math.max(120, canvasStage.clientWidth);
+        const stageH = Math.max(120, canvasStage.clientHeight);
+        let drawW = stageW;
+        let drawH = drawW / aspectRatio;
+
+        if (drawH > stageH) {
+          drawH = stageH;
+          drawW = drawH * aspectRatio;
+        }
+
+        canvas.style.width = `${Math.floor(drawW)}px`;
+        canvas.style.height = `${Math.floor(drawH)}px`;
+      } else {
+        // 일반 화면에서도 부모 폭 기준 정확한 고정 비율로 계산
+        const availW = Math.max(120, canvasStage.clientWidth);
+        const maxW = currentAspect === GAME_ASPECT.tall ? Math.min(340, availW) : availW;
+        const drawW = maxW;
+        const drawH = drawW / aspectRatio;
+
+        canvas.style.width = `${Math.floor(drawW)}px`;
+        canvas.style.height = `${Math.floor(drawH)}px`;
+      }
+    }
+
+    // 모든 기기(iOS Safari, Android, PC)에서 동일하게 작동하는 뷰포트 꽉 채움 전체화면
     function setGameFullscreen(enable) {
       isGameFullscreen = enable;
       arcadeCard.classList.toggle("is-fullscreen", enable);
       document.body.classList.toggle("fs-locked", enable);
       btnToggleFullscreen.textContent = enable ? "✕ 축소" : "⛶ 전체화면";
 
-      if (enable) {
-        if (!document.fullscreenElement && arcadeCard.requestFullscreen) {
-          arcadeCard.requestFullscreen().catch(() => {});
-        }
-      } else {
-        if (document.fullscreenElement && document.exitFullscreen) {
-          document.exitFullscreen().catch(() => {});
-        }
-      }
+      // 레이아웃 반영 직후 정확한 비율로 리사이즈
+      requestAnimationFrame(() => {
+        fitCanvasExactAspect();
+      });
     }
 
     btnToggleFullscreen.addEventListener("click", () => {
       setGameFullscreen(!isGameFullscreen);
     });
 
-    document.addEventListener("fullscreenchange", () => {
-      // 브라우저 기본 ESC 등으로 전체화면이 풀렸을 때 UI 상태 동기화
-      if (!document.fullscreenElement && isGameFullscreen) {
-        isGameFullscreen = false;
-        arcadeCard.classList.remove("is-fullscreen");
-        document.body.classList.remove("fs-locked");
-        btnToggleFullscreen.textContent = "⛶ 전체화면";
-      }
+    window.addEventListener("resize", fitCanvasExactAspect);
+    window.addEventListener("orientationchange", () => {
+      setTimeout(fitCanvasExactAspect, 120);
     });
 
     // 신기록 잠금 & 실수 재시작 방지 쿨타임 상태
@@ -799,6 +810,9 @@
       } else {
         isNewBestPending = false;
         hideSubmitBar();
+      }
+      if (isGameFullscreen) {
+        requestAnimationFrame(fitCanvasExactAspect);
       }
     }
 
@@ -2339,15 +2353,10 @@
     }
 
     function setCanvasResolution(isTall) {
-      if (isTall) {
-        canvas.width = 340;
-        canvas.height = 410;
-        canvas.classList.add("tall-mode");
-      } else {
-        canvas.width = 480;
-        canvas.height = 205;
-        canvas.classList.remove("tall-mode");
-      }
+      currentAspect = isTall ? GAME_ASPECT.tall : GAME_ASPECT.wide;
+      canvas.width = currentAspect.w;
+      canvas.height = currentAspect.h;
+      fitCanvasExactAspect();
     }
 
     function showLobby() {
@@ -2417,6 +2426,7 @@
 
       fetchLeaderboard();
       window.scrollTo({ top: 0, behavior: "smooth" });
+      requestAnimationFrame(fitCanvasExactAspect);
     }
 
     document.querySelectorAll(".game-card").forEach(card => {
@@ -2432,6 +2442,7 @@
       scoreSubmitBar.classList.remove("active", "new-record");
       btnSubmitScore.disabled = false;
       btnSubmitScore.textContent = "기록 등록";
+      if (isGameFullscreen) requestAnimationFrame(fitCanvasExactAspect);
     }
 
     function showSubmitBar(isNewRecord = false) {
@@ -2439,6 +2450,7 @@
       scoreSubmitBar.classList.toggle("new-record", isNewRecord);
       btnSubmitScore.disabled = false;
       btnSubmitScore.textContent = "기록 등록";
+      if (isGameFullscreen) requestAnimationFrame(fitCanvasExactAspect);
     }
 
     btnSkipRecord.addEventListener("click", () => {
@@ -2617,6 +2629,7 @@
 
         isNewBestPending = false;
         scoreSubmitBar.classList.remove("new-record");
+        if (isGameFullscreen) requestAnimationFrame(fitCanvasExactAspect);
         await fetchLeaderboard();
       } catch (err) {
         btnSubmitScore.disabled = false;
