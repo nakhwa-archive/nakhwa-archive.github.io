@@ -553,11 +553,23 @@
     <!-- 1. 게임 목록 로비 화면 -->
     <section id="lobbyView" class="lobby-view">
       <div class="lobby-intro">
-        <h2>🎮 미니게임 선택 (총 13종)</h2>
+        <h2>🎮 미니게임 선택 (총 14종)</h2>
         <p>원하는 게임을 선택해 길드원들과 랭킹을 겨뤄보세요!</p>
       </div>
 
       <div class="game-grid">
+        <button type="button" class="game-card" data-game="lighthouse">
+          <div class="game-icon-box">🔦</div>
+          <div class="game-card-body">
+            <div class="game-card-top">
+              <span class="game-card-title">낙화 등대 수비대</span>
+              <span class="game-best-badge" id="badgeLighthouse">BEST 0점</span>
+            </div>
+            <p class="game-card-desc">빛줄기를 회전시켜 어둠 속 요괴들을 정화하는 디펜스</p>
+          </div>
+          <span class="game-arrow">▶</span>
+        </button>
+
         <button type="button" class="game-card" data-game="racer">
           <div class="game-icon-box">🏎️</div>
           <div class="game-card-body">
@@ -759,7 +771,7 @@
     </footer>
   </main>
 
-  <!-- 공통 상태 및 캔버스 초기화 (게임 스크립트들보다 먼저 선언) -->
+  <!-- 공통 상태 및 캔버스 초기화 -->
   <script>
     const CONFIG = {
       firebaseDbUrl: "https://nakhwa-a90f6-default-rtdb.firebaseio.com"
@@ -789,7 +801,7 @@
 
     let isInPlayScreen = false;
     let isGameFullscreen = false;
-    let activeGame = "racer";
+    let activeGame = "lighthouse";
     const GROUND_Y = 170;
     let petals = [];
 
@@ -859,7 +871,7 @@
     }
   </script>
 
-  <!-- 분리된 13개 미니게임 모듈 -->
+  <!-- 분리된 14개 미니게임 모듈 -->
   <script src="./js/game-runner.js"></script>
   <script src="./js/game-slash.js"></script>
   <script src="./js/game-stack.js"></script>
@@ -873,6 +885,7 @@
   <script src="./js/game-snake.js"></script>
   <script src="./js/game-enhance.js"></script>
   <script src="./js/game-racer.js"></script>
+  <script src="./js/game-lighthouse.js"></script>
 
   <!-- 로비 전환, Firebase 랭킹, 입력 & 메인 루프 -->
   <script>
@@ -931,6 +944,7 @@
     });
 
     function updateLobbyBadges() {
+      document.getElementById("badgeLighthouse").textContent = `BEST ${lhBest}점`;
       document.getElementById("badgeRacer").textContent = `BEST ${racerBest}점`;
       document.getElementById("badgeEnhance").textContent = `BEST ${enhanceBest}점`;
       document.getElementById("badgeSnake").textContent = `BEST ${snakeBest}점`;
@@ -959,11 +973,13 @@
       snakeRunning = false;
       enhanceRunning = false;
       racerRunning = false;
+      lhRunning = false;
       smashState = "idle";
       dodgePointerActive = false;
       galagaDragging = false;
       brickDragging = false;
       racerDragging = false;
+      lhPointerDown = false;
       snakeSwipeStart = null;
       gogunHolding = false;
       gogunHoldFrames = 0;
@@ -1012,10 +1028,15 @@
       lobbyView.classList.add("hidden");
       playView.classList.add("active");
 
-      const tallGames = ["suika", "smash", "galaga", "punch", "brick", "snake", "enhance", "racer"];
+      const tallGames = ["suika", "smash", "galaga", "punch", "brick", "snake", "enhance", "racer", "lighthouse"];
       setCanvasResolution(tallGames.includes(game));
 
-      if (game === "racer") {
+      if (game === "lighthouse") {
+        playGameTitle.textContent = "🔦 낙화 등대 수비대";
+        easterHint.textContent = "터치·드래그(또는 ←→)로 빛 조준 · 100% 충전 시 섬광탄(스페이스)!";
+        rankingTitleEl.textContent = "🔦 등대 수비대 TOP 5";
+        resetLighthouse();
+      } else if (game === "racer") {
         playGameTitle.textContent = "🏎️ 낙화 터보 레이서";
         easterHint.textContent = "좌우 드래그(모바일) 또는 방향키/AD(PC)로 차량 추월!";
         rankingTitleEl.textContent = "🏎️ 터보 레이서 TOP 5";
@@ -1113,7 +1134,12 @@
     function handleCanvasAction() {
       if (!isInPlayScreen || document.activeElement === nickInput) return;
 
-      if (activeGame === "racer") {
+      if (activeGame === "lighthouse") {
+        if (lhOver || !lhRunning) {
+          if (!canRestartNow()) return;
+          resetLighthouse();
+        }
+      } else if (activeGame === "racer") {
         if (racerOver || !racerRunning) {
           if (!canRestartNow()) return;
           resetRacer();
@@ -1171,6 +1197,7 @@
     }
 
     function getDbNode() {
+      if (activeGame === "lighthouse") return "lighthouse_scores";
       if (activeGame === "racer") return "racer_scores";
       if (activeGame === "enhance") return "enhance_scores";
       if (activeGame === "snake") return "snake_scores";
@@ -1255,7 +1282,8 @@
       }
 
       let currentRecord = 0;
-      if (activeGame === "racer") currentRecord = racerLastScore;
+      if (activeGame === "lighthouse") currentRecord = lhLastScore;
+      else if (activeGame === "racer") currentRecord = racerLastScore;
       else if (activeGame === "enhance") currentRecord = enhanceScore;
       else if (activeGame === "snake") currentRecord = snakeScore;
       else if (activeGame === "brick") currentRecord = brickScore;
@@ -1332,6 +1360,24 @@
     canvas.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       if (!isInPlayScreen) return;
+
+      if (activeGame === "lighthouse") {
+        if (lhOver || !lhRunning) {
+          if (!canRestartNow()) return;
+          resetLighthouse();
+          return;
+        }
+        const rect = canvas.getBoundingClientRect();
+        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+        if (cy >= 365 && lhEnergy >= 100) {
+          triggerLhFlashBurst();
+          return;
+        }
+        lhPointerDown = true;
+        aimLighthouseAt(cx, cy);
+        return;
+      }
 
       if (activeGame === "racer") {
         if (racerOver || !racerRunning) {
@@ -1449,6 +1495,15 @@
     canvas.addEventListener("pointermove", (e) => {
       if (!isInPlayScreen) return;
 
+      if (activeGame === "lighthouse" && lhPointerDown && !lhOver) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+        aimLighthouseAt(cx, cy);
+        return;
+      }
+
       if (activeGame === "racer" && racerDragging && !racerOver) {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
@@ -1525,6 +1580,7 @@
       galagaDragging = false;
       brickDragging = false;
       racerDragging = false;
+      lhPointerDown = false;
       snakeSwipeStart = null;
       if (isInPlayScreen && activeGame === "gogun") {
         handleGogunPressEnd();
@@ -1540,6 +1596,7 @@
       galagaDragging = false;
       brickDragging = false;
       racerDragging = false;
+      lhPointerDown = false;
       snakeSwipeStart = null;
       suikaAiming = false;
       if (isInPlayScreen && activeGame === "gogun") {
@@ -1551,7 +1608,9 @@
       if (isInPlayScreen) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (activeGame === "racer") {
+        if (activeGame === "lighthouse") {
+          drawLighthouseFrame();
+        } else if (activeGame === "racer") {
           drawRacerFrame();
         } else if (activeGame === "enhance") {
           drawEnhanceFrame();
@@ -1587,6 +1646,12 @@
       if (!isInPlayScreen) return;
       if (document.activeElement === nickInput) {
         if (e.key === "Escape") nickInput.blur();
+        return;
+      }
+
+      if (activeGame === "lighthouse" && e.code === "Space") {
+        e.preventDefault();
+        if (!e.repeat) triggerLhFlashBurst();
         return;
       }
 
@@ -1628,7 +1693,7 @@
         }
       }
 
-      if (activeGame === "dodge" || activeGame === "suika" || activeGame === "galaga" || activeGame === "brick" || activeGame === "racer") {
+      if (activeGame === "dodge" || activeGame === "suika" || activeGame === "galaga" || activeGame === "brick" || activeGame === "racer" || activeGame === "lighthouse") {
         if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { e.preventDefault(); dodgeKeys.up = true; }
         if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") { e.preventDefault(); dodgeKeys.down = true; }
         if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
@@ -1641,7 +1706,7 @@
         return;
       }
 
-      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && activeGame !== "snake" && activeGame !== "enhance" && activeGame !== "racer" && e.key === "ArrowUp")) {
+      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && activeGame !== "snake" && activeGame !== "enhance" && activeGame !== "racer" && activeGame !== "lighthouse" && e.key === "ArrowUp")) {
         e.preventDefault();
         if (activeGame === "smash" && e.repeat) return;
         handleCanvasAction();
