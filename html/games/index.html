@@ -654,13 +654,14 @@
       }
     }
 
-    /* ---------- 5. 낙화 고군분투 (와이어 액션) 상태 ---------- */
+    /* ---------- 5. 낙화 고군분투 (지상 출발 전용 와이어 액션) ---------- */
     let gogunRunning = false;
     let gogunOver = false;
     let gogunScore = 0;
     let gogunLastScore = 0;
     let gogunBest = Number(localStorage.getItem("nakhwaGogunBest") || 0);
     let gogunHolding = false;
+    let gogunHoldFrames = 0;
     let gogunSpeed = 4.2;
     let gogunFrame = 0;
 
@@ -670,7 +671,8 @@
       w: 20,
       h: 22,
       vy: 0,
-      grounded: false
+      grounded: false,
+      canHook: true // 바닥에 닿아 있을 때만 true (착지해야 재충전)
     };
 
     const gogunHook = {
@@ -686,10 +688,10 @@
     let gogunCoins = [];
 
     function spawnGogunSection(startX) {
-      const gap = 85 + Math.random() * 95;
+      const gap = 85 + Math.random() * 90;
       const roofX = startX + gap;
-      const roofW = 110 + Math.random() * 120;
-      const roofY = 148 + (Math.random() - 0.5) * 32;
+      const roofW = 115 + Math.random() * 120;
+      const roofY = 148 + (Math.random() - 0.5) * 30;
       gogunRoofs.push({ x: roofX, y: roofY, w: roofW });
 
       const midGapX = startX + gap * 0.5;
@@ -704,11 +706,13 @@
 
     function resetGogun() {
       gogunPlayer.x = 82;
-      gogunPlayer.y = 126;
+      gogunPlayer.y = 130;
       gogunPlayer.vy = 0;
       gogunPlayer.grounded = true;
+      gogunPlayer.canHook = true;
       gogunHook.active = false;
       gogunHolding = false;
+      gogunHoldFrames = 0;
       gogunScore = 0;
       gogunSpeed = 4.2;
       gogunFrame = 0;
@@ -727,7 +731,11 @@
     }
 
     function attachGogunHook() {
-      if (gogunHook.active) return;
+      // 바닥에서 출발한 1회 기회(canHook)가 있을 때만 발사 가능
+      if (gogunHook.active || !gogunPlayer.canHook) return;
+      gogunPlayer.canHook = false; // 이번 체공에서 와이어 사용 완료 (재착지 전까지 재사용 불가)
+      gogunPlayer.grounded = false;
+
       gogunHook.active = true;
       gogunHook.anchorX = gogunPlayer.x + 88;
       gogunHook.anchorY = 12;
@@ -735,7 +743,7 @@
       const dy = gogunPlayer.y - gogunHook.anchorY;
       gogunHook.length = Math.max(55, Math.min(145, Math.hypot(dx, dy)));
       gogunHook.angle = Math.atan2(dx, dy);
-      gogunHook.angVel = 0.045;
+      gogunHook.angVel = 0.046;
     }
 
     function releaseGogunHook() {
@@ -752,17 +760,18 @@
         return;
       }
 
+      // 바닥에 닿아 있을 때만 점프/와이어 입력 유효! (공중 연타 차단)
+      if (!gogunPlayer.grounded) return;
+
       gogunHolding = true;
-      if (gogunPlayer.grounded) {
-        gogunPlayer.vy = -8.6;
-        gogunPlayer.grounded = false;
-      } else {
-        attachGogunHook();
-      }
+      gogunHoldFrames = 0;
+      gogunPlayer.vy = -8.6;
+      gogunPlayer.grounded = false;
     }
 
     function handleGogunPressEnd() {
       gogunHolding = false;
+      gogunHoldFrames = 0;
       if (gogunHook.active) {
         releaseGogunHook();
       }
@@ -786,6 +795,7 @@
       clearTimeout(slashTimer);
       dodgePointerActive = false;
       gogunHolding = false;
+      gogunHoldFrames = 0;
       gogunHook.active = false;
       hideSubmitBar();
 
@@ -813,7 +823,7 @@
         rankingTitleEl.textContent = "💥 낙화 닷지 TOP 5 (생존 시간)";
         resetDodge();
       } else {
-        easterHint.textContent = "짧게 탭=점프 / 공중에서 꾹 누르기=와이어 스윙 🪝";
+        easterHint.textContent = "지붕 위에서 짧게 탭=점프 / 꾹 누르기=와이어 1회 스윙 🪝";
         rankingTitleEl.textContent = "🪝 낙화 고군분투 TOP 5";
         resetGogun();
       }
@@ -1467,7 +1477,7 @@
       }
     }
 
-    /* ---------- 5. 낙화 고군분투 (와이어 액션) 렌더링 ---------- */
+    /* ---------- 5. 낙화 고군분투 (지상 출발 전용 와이어 액션) 렌더링 ---------- */
     function drawGogunFrame() {
       ctx.fillStyle = "rgba(255, 226, 154, 0.16)";
       ctx.beginPath();
@@ -1524,8 +1534,12 @@
           gogunPlayer.y += gogunPlayer.vy;
           gogunPlayer.grounded = false;
 
-          if (gogunHolding && gogunPlayer.vy > -1.0 && gogunPlayer.y > 42) {
-            attachGogunHook();
+          // 지붕 위에서 꾹 누르고 있을 때만 7프레임 후 와이어 1회 발사 (짧은 탭은 일반 점프로 끝남)
+          if (gogunHolding && gogunPlayer.canHook) {
+            gogunHoldFrames++;
+            if (gogunHoldFrames >= 7) {
+              attachGogunHook();
+            }
           }
 
           if (gogunPlayer.vy >= 0) {
@@ -1537,6 +1551,7 @@
                   gogunPlayer.y = r.y - gogunPlayer.h;
                   gogunPlayer.vy = 0;
                   gogunPlayer.grounded = true;
+                  gogunPlayer.canHook = true; // 지붕 착지 시 와이어 1회 재충전!
                   break;
                 }
               }
@@ -1605,6 +1620,14 @@
 
       const gx = Math.round(gogunPlayer.x);
       const gy = Math.round(gogunPlayer.y);
+
+      // 와이어 사용 가능 상태 표시 (지상에서 장전됨)
+      if (gogunPlayer.grounded && gogunPlayer.canHook && !gogunOver) {
+        ctx.fillStyle = "#ffd166";
+        ctx.beginPath();
+        ctx.arc(gx + 10, gy - 5, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       ctx.fillStyle = "#e65c7b";
       const scarfWave = Math.sin(gogunFrame * 0.35) * 3;
@@ -1707,7 +1730,6 @@
       }
     });
 
-    // 초기화 및 루프 시작
     switchGameTab("runner");
     gameLoop();
   </script>
