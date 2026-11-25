@@ -269,8 +269,8 @@
       margin: 0 auto;
     }
 
-    /* 수박게임 전용 세로 비율 캔버스 */
-    #gameCanvas.suika-mode {
+    /* 수박게임 & 건물부수기 세로 캔버스 */
+    #gameCanvas.tall-mode {
       max-width: 340px;
       height: 410px;
     }
@@ -440,11 +440,23 @@
     <!-- 1. 게임 목록 로비 화면 -->
     <section id="lobbyView" class="lobby-view">
       <div class="lobby-intro">
-        <h2>🎮 미니게임 선택 (총 6종)</h2>
+        <h2>🎮 미니게임 선택 (총 7종)</h2>
         <p>원하는 게임을 선택해 길드원들과 랭킹을 겨뤄보세요!</p>
       </div>
 
       <div class="game-grid">
+        <button type="button" class="game-card" data-game="smash">
+          <div class="game-icon-box">🏢</div>
+          <div class="game-card-body">
+            <div class="game-card-top">
+              <span class="game-card-title">건물 부수기</span>
+              <span class="game-best-badge" id="badgeSmash">BEST 0층</span>
+            </div>
+            <p class="game-card-desc">연타로 기를 모아 일격에 초고층 빌딩 박살내기</p>
+          </div>
+          <span class="game-arrow">▶</span>
+        </button>
+
         <button type="button" class="game-card" data-game="suika">
           <div class="game-icon-box">🍉</div>
           <div class="game-card-body">
@@ -577,7 +589,7 @@
     nickInput.value = localStorage.getItem("nakhwaRunnerNick") || "";
 
     let isInPlayScreen = false;
-    let activeGame = "suika"; // "suika" | "runner" | "slash" | "stack" | "dodge" | "gogun"
+    let activeGame = "smash"; // "smash" | "suika" | "runner" | "slash" | "stack" | "dodge" | "gogun"
     const GROUND_Y = 170;
     let petals = [];
 
@@ -1019,7 +1031,6 @@
     let suikaAiming = false;
 
     function randomSuikaSpawnTier() {
-      // 초반 4단계(꽃잎~경단) 중에서 랜덤 스폰
       return Math.floor(Math.random() * 4);
     }
 
@@ -1090,7 +1101,6 @@
         if (suikaDropCooldown <= 0) suikaCanDrop = true;
       }
 
-      // 키보드 좌우 미세 조준
       if (dodgeKeys.left) suikaDropX = clampSuikaX(suikaDropX - 4.2, suikaCurTier);
       if (dodgeKeys.right) suikaDropX = clampSuikaX(suikaDropX + 4.2, suikaCurTier);
 
@@ -1098,7 +1108,6 @@
       const gravity = 0.36 / subSteps;
 
       for (let step = 0; step < subSteps; step++) {
-        // 중력 및 벽 충돌
         for (const b of suikaBalls) {
           if (b.merged) continue;
           b.vy += gravity;
@@ -1122,7 +1131,6 @@
           }
         }
 
-        // 구슬 간 충돌 & 같은 단계 합체
         const newMergedBalls = [];
         for (let i = 0; i < suikaBalls.length; i++) {
           const a = suikaBalls[i];
@@ -1138,7 +1146,6 @@
             const minDist = a.r + b.r;
 
             if (dist < minDist && dist > 0.0001) {
-              // 같은 등급이면 합체!
               if (a.tier === b.tier && a.tier < SUIKA_TIERS.length - 1) {
                 a.merged = true;
                 b.merged = true;
@@ -1167,7 +1174,6 @@
                 break;
               }
 
-              // 다른 등급이면 탄성 반발 + 위치 보정
               const nx = dx / dist;
               const ny = dy / dist;
               const overlap = minDist - dist;
@@ -1200,7 +1206,6 @@
         }
       }
 
-      // 위험선 초과 판정 (떨어진 지 좀 된 구슬이 상단 점선을 넘으면 카운트)
       let overflow = false;
       for (const b of suikaBalls) {
         b.age++;
@@ -1233,13 +1238,11 @@
       ctx.strokeStyle = def.stroke;
       ctx.stroke();
 
-      // 상단 반사광
       ctx.beginPath();
       ctx.arc(x - def.r * 0.28, y - def.r * 0.28, def.r * 0.22, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
       ctx.fill();
 
-      // 중앙 이모지
       ctx.font = `${Math.round(def.r * 1.15)}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
@@ -1250,7 +1253,6 @@
     function drawSuikaFrame() {
       stepSuikaPhysics();
 
-      // 상단 점수 & NEXT 미리보기 HUD
       ctx.fillStyle = "#f4f4f6";
       ctx.font = "bold 14px sans-serif";
       ctx.textAlign = "left";
@@ -1260,14 +1262,12 @@
       ctx.font = "600 12px sans-serif";
       ctx.fillText(`BEST ${suikaBest}`, 16, 44);
 
-      // NEXT 박스
       ctx.fillStyle = "#9898a6";
       ctx.font = "bold 11px sans-serif";
       ctx.textAlign = "right";
       ctx.fillText("NEXT", 292, 28);
       drawSuikaBall(310, 26, Math.min(3, suikaNextTier), 1);
 
-      // 어항 컨테이너 박스
       ctx.fillStyle = "rgba(255, 255, 255, 0.02)";
       ctx.fillRect(
         SUIKA_BOX.left,
@@ -1285,7 +1285,6 @@
       ctx.lineTo(SUIKA_BOX.right, SUIKA_BOX.top);
       ctx.stroke();
 
-      // 상단 위험 점선
       ctx.save();
       ctx.setLineDash([5, 5]);
       ctx.strokeStyle = suikaDangerFrames > 0 ? "#ff4d6d" : "rgba(230, 92, 123, 0.45)";
@@ -1296,7 +1295,6 @@
       ctx.stroke();
       ctx.restore();
 
-      // 드롭 가이드라인 및 대기 중인 구슬
       if (suikaRunning && !suikaOver && suikaCanDrop) {
         const curR = SUIKA_TIERS[suikaCurTier].r;
         const previewY = SUIKA_BOX.top - 18;
@@ -1314,12 +1312,10 @@
         drawSuikaBall(suikaDropX, previewY, suikaCurTier, 0.95);
       }
 
-      // 쌓인 구슬들 렌더링
       for (const b of suikaBalls) {
         drawSuikaBall(b.x, b.y, b.tier, 1);
       }
 
-      // 합체 파티클 렌더링
       for (let i = suikaParticles.length - 1; i >= 0; i--) {
         const p = suikaParticles[i];
         p.x += p.vx;
@@ -1347,8 +1343,318 @@
       }
     }
 
+    /* ---------- 7. 건물 부수기 (Building Smash) 상태 ---------- */
+    // state: "idle" | "charging" | "timing" | "smashing" | "result"
+    let smashState = "idle";
+    let smashPower = 0;          // 연타로 모은 내공 (0 ~ 100+)
+    let smashChargeStart = 0;
+    const SMASH_CHARGE_MS = 5000;
+    let smashGaugePos = 0.5;     // 0.0 ~ 1.0 왕복 바
+    let smashGaugeDir = 1;
+    let smashMultiplier = 1.0;
+    let smashCritLabel = "";
+    let smashTargetFloors = 0;
+    let smashBrokenFloors = 0;
+    let smashBest = Number(localStorage.getItem("nakhwaSmashBest") || 0);
+    let smashDebris = [];
+    let smashShake = 0;
+    let smashAuraPulse = 0;
+
+    function resetSmash() {
+      smashState = "idle";
+      smashPower = 0;
+      smashGaugePos = 0.5;
+      smashGaugeDir = 1;
+      smashMultiplier = 1.0;
+      smashCritLabel = "";
+      smashTargetFloors = 0;
+      smashBrokenFloors = 0;
+      smashDebris = [];
+      smashShake = 0;
+      smashAuraPulse = 0;
+      hideSubmitBar();
+    }
+
+    function spawnSmashDebris(y, count) {
+      const colors = ["#78788c", "#565668", "#e65c7b", "#ffb7c5", "#d0d0dc"];
+      for (let i = 0; i < count; i++) {
+        smashDebris.push({
+          x: 115 + Math.random() * 110,
+          y: y + (Math.random() - 0.5) * 14,
+          vx: (Math.random() - 0.5) * 9,
+          vy: -2 - Math.random() * 5,
+          w: 6 + Math.random() * 8,
+          h: 5 + Math.random() * 6,
+          rot: Math.random() * Math.PI,
+          vrot: (Math.random() - 0.5) * 0.25,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          life: 45
+        });
+      }
+    }
+
+    function handleSmashAction() {
+      if (smashState === "idle" || smashState === "result") {
+        // 시작과 동시에 첫 연타 카운트!
+        smashState = "charging";
+        smashPower = 3;
+        smashChargeStart = performance.now();
+        smashBrokenFloors = 0;
+        smashDebris = [];
+        smashAuraPulse = 1;
+        smashShake = 3;
+        hideSubmitBar();
+        return;
+      }
+
+      if (smashState === "charging") {
+        smashPower += 3.2;
+        smashAuraPulse = 1;
+        smashShake = Math.min(8, 2 + smashPower * 0.04);
+        return;
+      }
+
+      if (smashState === "timing") {
+        // 정중앙(0.5)과의 오차로 배율 결정
+        const distFromCenter = Math.abs(smashGaugePos - 0.5);
+        if (distFromCenter <= 0.06) {
+          smashMultiplier = 1.5;
+          smashCritLabel = "💥 CRITICAL x1.5!!";
+        } else if (distFromCenter <= 0.16) {
+          smashMultiplier = 1.2;
+          smashCritLabel = "⚡ GREAT x1.2!";
+        } else {
+          smashMultiplier = 0.9;
+          smashCritLabel = "👊 HIT x0.9";
+        }
+
+        // 최종 격파 층수 산출 (연타 파워 * 타이밍 배율)
+        smashTargetFloors = Math.max(1, Math.round(smashPower * smashMultiplier));
+        smashBrokenFloors = 0;
+        smashState = "smashing";
+        smashShake = 14;
+      }
+    }
+
+    function drawSmashFrame() {
+      ctx.save();
+      if (smashShake > 0.3) {
+        const sx = (Math.random() - 0.5) * smashShake;
+        const sy = (Math.random() - 0.5) * smashShake;
+        ctx.translate(sx, sy);
+        smashShake *= 0.86;
+      }
+
+      // 1) 상태 업데이트
+      let remainSec = 5.0;
+      if (smashState === "charging") {
+        const elapsed = performance.now() - smashChargeStart;
+        remainSec = Math.max(0, (SMASH_CHARGE_MS - elapsed) / 1000);
+        if (elapsed >= SMASH_CHARGE_MS) {
+          smashState = "timing";
+          smashGaugePos = 0.1;
+          smashGaugeDir = 1;
+        }
+      } else if (smashState === "timing") {
+        smashGaugePos += smashGaugeDir * 0.026;
+        if (smashGaugePos >= 1) {
+          smashGaugePos = 1;
+          smashGaugeDir = -1;
+        } else if (smashGaugePos <= 0) {
+          smashGaugePos = 0;
+          smashGaugeDir = 1;
+        }
+      } else if (smashState === "smashing") {
+        // 층수가 1층씩 빠르게 격파되며 올라감
+        const step = Math.max(1, Math.ceil((smashTargetFloors - smashBrokenFloors) * 0.14));
+        smashBrokenFloors = Math.min(smashTargetFloors, smashBrokenFloors + step);
+        if (Math.random() < 0.75) {
+          spawnSmashDebris(290, 5);
+          smashShake = 7;
+        }
+        if (smashBrokenFloors >= smashTargetFloors) {
+          smashState = "result";
+          if (smashTargetFloors > smashBest) {
+            smashBest = smashTargetFloors;
+            localStorage.setItem("nakhwaSmashBest", String(smashBest));
+          }
+          if (smashTargetFloors > 0) showSubmitBar();
+        }
+      }
+
+      // 2) 상단 HUD
+      ctx.fillStyle = "#9898a6";
+      ctx.font = "bold 12px sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(`BEST ${smashBest}층`, 324, 24);
+
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#ff8ca5";
+      ctx.font = "bold 13px sans-serif";
+      ctx.fillText(`내공 POWER ${Math.round(smashPower)}`, 16, 24);
+
+      // 3) 콘크리트 빌딩 렌더링 (중앙 x: 110 ~ 230, 지면 y: 315)
+      const groundY = 315;
+      const bX = 112;
+      const bW = 116;
+      const floorH = 22;
+      const visibleFloors = 10;
+
+      // 타격 시 건물이 아래로 쑥 내려앉는 연출
+      const dropOffset = smashState === "smashing" ? (smashBrokenFloors % 2) * 5 : 0;
+
+      for (let i = 0; i < visibleFloors; i++) {
+        const floorNum = smashBrokenFloors + i + 1;
+        const fy = groundY - (i + 1) * floorH + dropOffset;
+
+        // 콘크리트 외벽
+        ctx.fillStyle = i % 2 === 0 ? "#2a2a35" : "#23232d";
+        ctx.fillRect(bX, fy, bW, floorH - 1);
+        ctx.strokeStyle = "#3a3a48";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(bX, fy, bW, floorH - 1);
+
+        // 창문 3개
+        ctx.fillStyle = i === 0 && (smashState === "smashing" || smashState === "result")
+          ? "#ff5e84"
+          : "rgba(255, 209, 102, 0.25)";
+        ctx.fillRect(bX + 14, fy + 5, 20, 11);
+        ctx.fillRect(bX + 48, fy + 5, 20, 11);
+        ctx.fillRect(bX + 82, fy + 5, 20, 11);
+
+        // 층수 표기
+        ctx.fillStyle = "#9898a6";
+        ctx.font = "bold 10px sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText(`${floorNum}F`, bX - 6, fy + 15);
+      }
+
+      // 4) 지면 & 무술가 캐릭터 (건물 아래에서 올려치기/내려치기)
+      ctx.fillStyle = "#1c1c22";
+      ctx.fillRect(0, groundY, canvas.width, canvas.height - groundY);
+      ctx.strokeStyle = "#e65c7b";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, groundY);
+      ctx.lineTo(canvas.width, groundY);
+      ctx.stroke();
+
+      // 기 모으기 오라 이펙트
+      if (smashPower > 0 && (smashState === "charging" || smashState === "timing")) {
+        const auraR = Math.min(68, 22 + smashPower * 0.35 + smashAuraPulse * 8);
+        ctx.fillStyle = "rgba(230, 92, 123, 0.22)";
+        ctx.beginPath();
+        ctx.arc(170, groundY + 18, auraR, Math.PI, Math.PI * 2);
+        ctx.fill();
+        smashAuraPulse *= 0.85;
+      }
+
+      // 캐릭터 도트 (무술가)
+      const cx = 160;
+      const cy = groundY + 4;
+      ctx.fillStyle = "#f4f4f6";
+      ctx.fillRect(cx + 2, cy, 16, 18);
+      ctx.fillStyle = "#e65c7b";
+      ctx.fillRect(cx + 2, cy + 3, 16, 3); // 머리띠
+      // 주먹 (타격 중에는 위로 뻗음)
+      ctx.fillStyle = "#ffd166";
+      if (smashState === "smashing" || smashState === "result") {
+        ctx.fillRect(cx + 6, cy - 10, 8, 10);
+      } else {
+        ctx.fillRect(cx + 16, cy + 7, 7, 7);
+      }
+
+      // 5) 파편 파티클 렌더링
+      for (let i = smashDebris.length - 1; i >= 0; i--) {
+        const d = smashDebris[i];
+        d.vy += 0.38;
+        d.x += d.vx;
+        d.y += d.vy;
+        d.rot += d.vrot;
+        d.life--;
+
+        ctx.save();
+        ctx.translate(d.x, d.y);
+        ctx.rotate(d.rot);
+        ctx.fillStyle = d.color;
+        ctx.fillRect(-d.w / 2, -d.h / 2, d.w, d.h);
+        ctx.restore();
+
+        if (d.life <= 0) smashDebris.splice(i, 1);
+      }
+
+      // 6) 하단 컨트롤 패널 (상태별 UI)
+      ctx.textAlign = "center";
+      if (smashState === "idle") {
+        ctx.fillStyle = "rgba(15, 15, 18, 0.65)";
+        ctx.fillRect(24, 125, 292, 86);
+        ctx.fillStyle = "#f4f4f6";
+        ctx.font = "bold 18px sans-serif";
+        ctx.fillText("🏢 초고층 건물 부수기", 170, 158);
+        ctx.fillStyle = "#ff8ca5";
+        ctx.font = "600 13px sans-serif";
+        ctx.fillText("터치 또는 스페이스바를 연타해 시작!", 170, 184);
+      } else if (smashState === "charging") {
+        ctx.fillStyle = "#ffd166";
+        ctx.font = "900 22px sans-serif";
+        ctx.fillText(`🔥 연타해서 기 모으기! (${remainSec.toFixed(1)}초)`, 170, 62);
+
+        // 파워 게이지 바
+        const barW = 240;
+        const barX = 50;
+        const fillRatio = Math.min(1, smashPower / 110);
+        ctx.fillStyle = "#262630";
+        ctx.fillRect(barX, 74, barW, 14);
+        ctx.fillStyle = fillRatio > 0.8 ? "#ff4d6d" : "#e65c7b";
+        ctx.fillRect(barX, 74, barW * fillRatio, 14);
+      } else if (smashState === "timing") {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "900 18px sans-serif";
+        ctx.fillText("⚡ 중앙에 맞춰 일격 필살!!", 170, 355);
+
+        // 정밀 타이밍 바
+        const gX = 40;
+        const gW = 260;
+        const gY = 368;
+        const gH = 18;
+
+        ctx.fillStyle = "#262630";
+        ctx.fillRect(gX, gY, gW, gH);
+
+        // GREAT 존 (중앙 32%)
+        ctx.fillStyle = "rgba(255, 209, 102, 0.35)";
+        ctx.fillRect(gX + gW * 0.34, gY, gW * 0.32, gH);
+
+        // CRITICAL 존 (중앙 12%)
+        ctx.fillStyle = "#e65c7b";
+        ctx.fillRect(gX + gW * 0.44, gY, gW * 0.12, gH);
+
+        // 움직이는 커서
+        const cursorX = gX + gW * smashGaugePos;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(cursorX - 2.5, gY - 4, 5, gH + 8);
+      } else if (smashState === "smashing" || smashState === "result") {
+        ctx.fillStyle = "#ffd166";
+        ctx.font = "900 16px sans-serif";
+        ctx.fillText(smashCritLabel, 170, 348);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "900 22px sans-serif";
+        ctx.fillText(`💥 ${smashBrokenFloors}층 격파!`, 170, 376);
+
+        if (smashState === "result") {
+          ctx.fillStyle = "#ff8ca5";
+          ctx.font = "600 12px sans-serif";
+          ctx.fillText("터치하여 다시 도전하기", 170, 398);
+        }
+      }
+
+      ctx.restore();
+    }
+
     /* ---------- 로비 <-> 플레이 화면 전환 ---------- */
     function updateLobbyBadges() {
+      document.getElementById("badgeSmash").textContent = `BEST ${smashBest}층`;
       document.getElementById("badgeSuika").textContent = `BEST ${suikaBest}점`;
       document.getElementById("badgeRunner").textContent = `BEST ${runnerBest}점`;
       document.getElementById("badgeSlash").textContent =
@@ -1364,6 +1670,7 @@
       dodgeRunning = false;
       gogunRunning = false;
       suikaRunning = false;
+      smashState = "idle";
       dodgePointerActive = false;
       gogunHolding = false;
       gogunHoldFrames = 0;
@@ -1372,15 +1679,15 @@
       clearTimeout(slashTimer);
     }
 
-    function setCanvasResolution(isSuika) {
-      if (isSuika) {
+    function setCanvasResolution(isTall) {
+      if (isTall) {
         canvas.width = 340;
         canvas.height = 410;
-        canvas.classList.add("suika-mode");
+        canvas.classList.add("tall-mode");
       } else {
         canvas.width = 480;
         canvas.height = 205;
-        canvas.classList.remove("suika-mode");
+        canvas.classList.remove("tall-mode");
       }
     }
 
@@ -1403,9 +1710,14 @@
       lobbyView.classList.add("hidden");
       playView.classList.add("active");
 
-      setCanvasResolution(game === "suika");
+      setCanvasResolution(game === "suika" || game === "smash");
 
-      if (game === "suika") {
+      if (game === "smash") {
+        playGameTitle.textContent = "🏢 건물 부수기";
+        easterHint.textContent = "5초간 미친 듯이 연타 후, 정중앙 타이밍에 맞춰 일격!";
+        rankingTitleEl.textContent = "🏢 건물 부수기 TOP 5";
+        resetSmash();
+      } else if (game === "suika") {
         playGameTitle.textContent = "🍉 낙화 수박게임";
         easterHint.textContent = "드래그로 위치 조준 후 손을 떼면 드롭! (PC: 방향키+스페이스)";
         rankingTitleEl.textContent = "🍉 낙화 수박게임 TOP 5";
@@ -1466,7 +1778,9 @@
     function handleCanvasAction() {
       if (!isInPlayScreen || document.activeElement === nickInput) return;
 
-      if (activeGame === "suika") {
+      if (activeGame === "smash") {
+        handleSmashAction();
+      } else if (activeGame === "suika") {
         if (suikaOver || !suikaRunning) {
           resetSuika();
           return;
@@ -1494,6 +1808,7 @@
 
     /* ---------- Firebase 랭킹 연동 ---------- */
     function getDbNode() {
+      if (activeGame === "smash") return "smash_scores";
       if (activeGame === "suika") return "suika_scores";
       if (activeGame === "runner") return "runner_scores";
       if (activeGame === "slash") return "slash_scores";
@@ -1547,7 +1862,7 @@
             scoreSpan.textContent = `${entry.score}점`;
           } else if (activeGame === "slash") {
             scoreSpan.textContent = `${(entry.score / 1000).toFixed(3)}초`;
-          } else if (activeGame === "stack") {
+          } else if (activeGame === "stack" || activeGame === "smash") {
             scoreSpan.textContent = `${entry.score}층`;
           } else {
             scoreSpan.textContent = `${(entry.score / 1000).toFixed(2)}초`;
@@ -1571,7 +1886,8 @@
       }
 
       let currentRecord = 0;
-      if (activeGame === "suika") currentRecord = suikaScore;
+      if (activeGame === "smash") currentRecord = smashTargetFloors;
+      else if (activeGame === "suika") currentRecord = suikaScore;
       else if (activeGame === "runner") currentRecord = runnerLastScore;
       else if (activeGame === "slash") currentRecord = slashReactionMs;
       else if (activeGame === "stack") currentRecord = stackFloors;
@@ -1613,7 +1929,7 @@
         } else {
           let prevLabel = `${prevScore}점`;
           if (activeGame === "slash") prevLabel = `${(prevScore / 1000).toFixed(3)}초`;
-          else if (activeGame === "stack") prevLabel = `${prevScore}층`;
+          else if (activeGame === "stack" || activeGame === "smash") prevLabel = `${prevScore}층`;
           else if (activeGame === "dodge") prevLabel = `${(prevScore / 1000).toFixed(2)}초`;
           btnSubmitScore.textContent = `기존 최고 ${prevLabel}`;
         }
@@ -2343,7 +2659,9 @@
       if (isInPlayScreen) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (activeGame === "suika") {
+        if (activeGame === "smash") {
+          drawSmashFrame();
+        } else if (activeGame === "suika") {
           drawSuikaFrame();
         } else if (activeGame === "runner") {
           drawRunnerFrame();
@@ -2384,6 +2702,7 @@
 
       if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && e.key === "ArrowUp")) {
         e.preventDefault();
+        if (activeGame === "smash" && e.repeat) return;
         handleCanvasAction();
       } else if (e.key === "Escape") {
         showLobby();
