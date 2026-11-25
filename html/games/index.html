@@ -553,11 +553,23 @@
     <!-- 1. 게임 목록 로비 화면 -->
     <section id="lobbyView" class="lobby-view">
       <div class="lobby-intro">
-        <h2>🎮 미니게임 선택 (총 16종)</h2>
+        <h2>🎮 미니게임 선택 (총 17종)</h2>
         <p>원하는 게임을 선택해 길드원들과 랭킹을 겨뤄보세요!</p>
       </div>
 
       <div class="game-grid">
+        <button type="button" class="game-card" data-game="barricade">
+          <div class="game-icon-box">🧟</div>
+          <div class="game-card-body">
+            <div class="game-card-top">
+              <span class="game-card-title">낙화 좀비 바리케이드</span>
+              <span class="game-best-badge" id="badgeBarricade">BEST 0점</span>
+            </div>
+            <p class="game-card-desc">산탄·관통탄으로 바리케이드 앞 좀비 무리 방어!</p>
+          </div>
+          <span class="game-arrow">▶</span>
+        </button>
+
         <button type="button" class="game-card" data-game="bubble">
           <div class="game-icon-box">🫧</div>
           <div class="game-card-body">
@@ -825,7 +837,7 @@
 
     let isInPlayScreen = false;
     let isGameFullscreen = false;
-    let activeGame = "bubble";
+    let activeGame = "barricade";
     const GROUND_Y = 170;
     let petals = [];
 
@@ -895,7 +907,7 @@
     }
   </script>
 
-  <!-- 분리된 16개 미니게임 모듈 -->
+  <!-- 분리된 17개 미니게임 모듈 -->
   <script src="./js/game-runner.js"></script>
   <script src="./js/game-slash.js"></script>
   <script src="./js/game-stack.js"></script>
@@ -912,6 +924,7 @@
   <script src="./js/game-lighthouse.js"></script>
   <script src="./js/game-archery.js"></script>
   <script src="./js/game-bubble.js"></script>
+  <script src="./js/game-barricade.js"></script>
 
   <!-- 로비 전환, Firebase 랭킹, 입력 & 메인 루프 -->
   <script>
@@ -970,6 +983,7 @@
     });
 
     function updateLobbyBadges() {
+      document.getElementById("badgeBarricade").textContent = `BEST ${bcBest}점`;
       document.getElementById("badgeBubble").textContent = `BEST ${bubbleBest}점`;
       document.getElementById("badgeArchery").textContent = `BEST ${archeryBest}점`;
       document.getElementById("badgeLighthouse").textContent = `BEST ${lhBest}점`;
@@ -1004,12 +1018,14 @@
       lhRunning = false;
       archeryRunning = false;
       bubbleRunning = false;
+      bcRunning = false;
       smashState = "idle";
       dodgePointerActive = false;
       galagaDragging = false;
       brickDragging = false;
       racerDragging = false;
       lhPointerDown = false;
+      bcPointerDown = false;
       snakeSwipeStart = null;
       gogunHolding = false;
       gogunHoldFrames = 0;
@@ -1058,10 +1074,15 @@
       lobbyView.classList.add("hidden");
       playView.classList.add("active");
 
-      const tallGames = ["suika", "smash", "galaga", "punch", "brick", "snake", "enhance", "racer", "lighthouse", "archery", "bubble"];
+      const tallGames = ["suika", "smash", "galaga", "punch", "brick", "snake", "enhance", "racer", "lighthouse", "archery", "bubble", "barricade"];
       setCanvasResolution(tallGames.includes(game));
 
-      if (game === "bubble") {
+      if (game === "barricade") {
+        playGameTitle.textContent = "🧟 낙화 좀비 바리케이드";
+        easterHint.textContent = "터치/클릭 조준 사격(PC: ←→ + 스페이스) · 산탄/관통탄 상자 획득!";
+        rankingTitleEl.textContent = "🧟 좀비 바리케이드 TOP 5";
+        resetBarricade();
+      } else if (game === "bubble") {
         playGameTitle.textContent = "🫧 거품 팡팡 버블 팝";
         easterHint.textContent = "같은 색 거품을 연속 터치하면 연쇄 폭발! 가시 거품(💣)은 주의!";
         rankingTitleEl.textContent = "🫧 버블 팝 TOP 5";
@@ -1174,7 +1195,9 @@
     function handleCanvasAction() {
       if (!isInPlayScreen || document.activeElement === nickInput) return;
 
-      if (activeGame === "bubble") {
+      if (activeGame === "barricade") {
+        fireBarricadeWeapon();
+      } else if (activeGame === "bubble") {
         if (bubbleOver || !bubbleRunning) {
           if (!canRestartNow()) return;
           resetBubble();
@@ -1244,6 +1267,7 @@
     }
 
     function getDbNode() {
+      if (activeGame === "barricade") return "barricade_scores";
       if (activeGame === "bubble") return "bubble_scores";
       if (activeGame === "archery") return "archery_scores";
       if (activeGame === "lighthouse") return "lighthouse_scores";
@@ -1331,7 +1355,8 @@
       }
 
       let currentRecord = 0;
-      if (activeGame === "bubble") currentRecord = bubbleLastScore;
+      if (activeGame === "barricade") currentRecord = bcLastScore;
+      else if (activeGame === "bubble") currentRecord = bubbleLastScore;
       else if (activeGame === "archery") currentRecord = archeryLastScore;
       else if (activeGame === "lighthouse") currentRecord = lhLastScore;
       else if (activeGame === "racer") currentRecord = racerLastScore;
@@ -1411,6 +1436,21 @@
     canvas.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       if (!isInPlayScreen) return;
+
+      if (activeGame === "barricade") {
+        if (bcOver || !bcRunning) {
+          if (!canRestartNow()) return;
+          resetBarricade();
+          return;
+        }
+        const rect = canvas.getBoundingClientRect();
+        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+        aimBarricadeAt(cx, cy);
+        bcPointerDown = true;
+        fireBarricadeWeapon();
+        return;
+      }
 
       if (activeGame === "bubble") {
         const rect = canvas.getBoundingClientRect();
@@ -1554,6 +1594,15 @@
     canvas.addEventListener("pointermove", (e) => {
       if (!isInPlayScreen) return;
 
+      if (activeGame === "barricade" && bcPointerDown && !bcOver) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
+        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
+        aimBarricadeAt(cx, cy);
+        return;
+      }
+
       if (activeGame === "lighthouse" && lhPointerDown && !lhOver) {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
@@ -1640,6 +1689,7 @@
       brickDragging = false;
       racerDragging = false;
       lhPointerDown = false;
+      bcPointerDown = false;
       snakeSwipeStart = null;
       if (isInPlayScreen && activeGame === "gogun") {
         handleGogunPressEnd();
@@ -1656,6 +1706,7 @@
       brickDragging = false;
       racerDragging = false;
       lhPointerDown = false;
+      bcPointerDown = false;
       snakeSwipeStart = null;
       suikaAiming = false;
       if (isInPlayScreen && activeGame === "gogun") {
@@ -1667,7 +1718,9 @@
       if (isInPlayScreen) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (activeGame === "bubble") {
+        if (activeGame === "barricade") {
+          drawBarricadeFrame();
+        } else if (activeGame === "bubble") {
           drawBubbleFrame();
         } else if (activeGame === "archery") {
           drawArcheryFrame();
@@ -1756,7 +1809,7 @@
         }
       }
 
-      if (activeGame === "dodge" || activeGame === "suika" || activeGame === "galaga" || activeGame === "brick" || activeGame === "racer" || activeGame === "lighthouse") {
+      if (activeGame === "dodge" || activeGame === "suika" || activeGame === "galaga" || activeGame === "brick" || activeGame === "racer" || activeGame === "lighthouse" || activeGame === "barricade") {
         if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { e.preventDefault(); dodgeKeys.up = true; }
         if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") { e.preventDefault(); dodgeKeys.down = true; }
         if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
@@ -1769,7 +1822,7 @@
         return;
       }
 
-      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && activeGame !== "snake" && activeGame !== "enhance" && activeGame !== "racer" && activeGame !== "lighthouse" && activeGame !== "bubble" && e.key === "ArrowUp")) {
+      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && activeGame !== "snake" && activeGame !== "enhance" && activeGame !== "racer" && activeGame !== "lighthouse" && activeGame !== "bubble" && activeGame !== "barricade" && e.key === "ArrowUp")) {
         e.preventDefault();
         if (activeGame === "smash" && e.repeat) return;
         handleCanvasAction();
