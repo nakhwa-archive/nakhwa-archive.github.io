@@ -559,11 +559,23 @@
     <!-- 1. 게임 목록 로비 화면 -->
     <section id="lobbyView" class="lobby-view">
       <div class="lobby-intro">
-        <h2>🎮 미니게임 선택 (총 10종)</h2>
+        <h2>🎮 미니게임 선택 (총 11종)</h2>
         <p>원하는 게임을 선택해 길드원들과 랭킹을 겨뤄보세요!</p>
       </div>
 
       <div class="game-grid">
+        <button type="button" class="game-card" data-game="snake">
+          <div class="game-icon-box">🐍</div>
+          <div class="game-card-body">
+            <div class="game-card-top">
+              <span class="game-card-title">꼬리잡기 스네이크</span>
+              <span class="game-best-badge" id="badgeSnake">BEST 0점</span>
+            </div>
+            <p class="game-card-desc">경단과 벚꽃 보석을 먹으며 꼬리 길게 늘리기</p>
+          </div>
+          <span class="game-arrow">▶</span>
+        </button>
+
         <button type="button" class="game-card" data-game="brick">
           <div class="game-icon-box">🧱</div>
           <div class="game-card-body">
@@ -758,7 +770,7 @@
 
     let isInPlayScreen = false;
     let isGameFullscreen = false;
-    let activeGame = "brick";
+    let activeGame = "snake";
     const GROUND_Y = 170;
     let petals = [];
 
@@ -2765,7 +2777,6 @@
 
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          // 스테이지 2 이상부터 상단 줄에 내구도 2짜리 단단한 기와 블록 배치
           const isHard = stage >= 2 && r === 0 && (c % 2 === 0);
           brickBlocks.push({
             x: padX + c * (bw + gap),
@@ -2841,9 +2852,8 @@
     function applyBrickItem(type) {
       if (type === "W") {
         brickPaddle.w = 112;
-        brickPaddle.wideTimer = 600; // 10초간 확장
+        brickPaddle.wideTimer = 600;
       } else if (type === "M") {
-        // 멀티볼: 현재 활성 공 중 첫 번째 공을 기준으로 2개 추가 분열
         const src = brickBalls.find(b => !b.stuck) || brickBalls[0];
         if (src && brickBalls.length < 9) {
           const spd = Math.hypot(src.vx, src.vy) || 4.4;
@@ -2867,19 +2877,16 @@
 
     function drawBrickFrame() {
       if (brickRunning && !brickOver) {
-        // 패들 확장 지속시간 감소
         if (brickPaddle.wideTimer > 0) {
           brickPaddle.wideTimer--;
           if (brickPaddle.wideTimer <= 0) brickPaddle.w = 76;
         }
 
-        // PC 좌우 이동
         if (dodgeKeys.left) brickPaddle.x -= brickPaddle.speed;
         if (dodgeKeys.right) brickPaddle.x += brickPaddle.speed;
         const halfW = brickPaddle.w / 2;
         brickPaddle.x = Math.max(halfW + 6, Math.min(canvas.width - halfW - 6, brickPaddle.x));
 
-        // 공 물리 & 충돌 처리
         for (let bi = brickBalls.length - 1; bi >= 0; bi--) {
           const b = brickBalls[bi];
           if (b.stuck) {
@@ -2891,7 +2898,6 @@
           b.x += b.vx;
           b.y += b.vy;
 
-          // 좌/우/상단 벽 반사
           if (b.x - b.r < 6) {
             b.x = 6 + b.r;
             b.vx = Math.abs(b.vx);
@@ -2904,7 +2910,6 @@
             b.vy = Math.abs(b.vy);
           }
 
-          // 패들 반사 (맞은 위치에 따라 반사 각도 조절)
           if (
             b.vy > 0 &&
             b.y + b.r >= brickPaddle.y &&
@@ -2920,7 +2925,6 @@
             b.y = brickPaddle.y - b.r - 1;
           }
 
-          // 벽돌 충돌 체크
           for (let i = brickBlocks.length - 1; i >= 0; i--) {
             const blk = brickBlocks[i];
             if (
@@ -2929,7 +2933,6 @@
               b.y + b.r > blk.y &&
               b.y - b.r < blk.y + blk.h
             ) {
-              // 어느 면에 부딪혔는지 계산
               const overlapLeft = (b.x + b.r) - blk.x;
               const overlapRight = (blk.x + blk.w) - (b.x - b.r);
               const overlapTop = (b.y + b.r) - blk.y;
@@ -2953,7 +2956,6 @@
                 }
                 spawnBrickBurst(blk.x + blk.w / 2, blk.y + blk.h / 2, pal.fill);
 
-                // 18% 확률로 아이템 캡슐 드롭
                 if (Math.random() < 0.18) {
                   const pool = ["W", "M", "+"];
                   const kind = pool[Math.floor(Math.random() * pool.length)];
@@ -2973,13 +2975,11 @@
             }
           }
 
-          // 바닥 아래로 추락
           if (b.y - b.r > canvas.height + 10) {
             brickBalls.splice(bi, 1);
           }
         }
 
-        // 모든 공을 놓쳤을 때 라이프 차감
         if (brickBalls.length === 0) {
           brickLives--;
           brickPaddle.w = 76;
@@ -2992,7 +2992,6 @@
           }
         }
 
-        // 모든 블록 격파 시 다음 스테이지
         if (brickBlocks.length === 0 && !brickOver) {
           brickStage++;
           brickScore += 200;
@@ -3006,7 +3005,6 @@
           spawnAnchoredBrickBall();
         }
 
-        // 아이템 이동 & 패들 획득 판정
         for (let i = brickItems.length - 1; i >= 0; i--) {
           const it = brickItems[i];
           it.y += it.vy;
@@ -3029,7 +3027,6 @@
         }
       }
 
-      // 1) 상단 경계선 & HUD
       ctx.strokeStyle = "#282832";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -3051,7 +3048,6 @@
       ctx.fillText(`BEST ${brickBest}`, 328, 22);
       ctx.fillText("❤️".repeat(Math.max(0, brickLives)), 328, 38);
 
-      // 2) 벽돌 블록 그리기
       for (const blk of brickBlocks) {
         const pal = BRICK_PALETTE[blk.colorIdx];
         ctx.fillStyle = blk.hp === 2 ? "#9898a6" : pal.fill;
@@ -3063,12 +3059,10 @@
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // 상단 광택
         ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
         ctx.fillRect(blk.x + 3, blk.y + 2, blk.w - 6, 2.5);
       }
 
-      // 3) 떨어지는 아이템 캡슐
       for (const it of brickItems) {
         ctx.fillStyle = it.kind === "W" ? "#4ea8de" : (it.kind === "M" ? "#e65c7b" : "#ffd166");
         ctx.beginPath();
@@ -3083,7 +3077,6 @@
       }
       ctx.textBaseline = "alphabetic";
 
-      // 4) 패들 그리기
       const pLeft = brickPaddle.x - brickPaddle.w / 2;
       ctx.fillStyle = brickPaddle.wideTimer > 0 ? "#4ea8de" : "#e65c7b";
       ctx.beginPath();
@@ -3092,7 +3085,6 @@
       ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
       ctx.fillRect(pLeft + 8, brickPaddle.y + 2, brickPaddle.w - 16, 2.5);
 
-      // 5) 공 그리기
       for (const b of brickBalls) {
         ctx.fillStyle = "#ffffff";
         ctx.beginPath();
@@ -3104,7 +3096,6 @@
         ctx.fill();
       }
 
-      // 공이 패들에 붙어있을 때 발사 안내
       if (!brickOver && brickBalls.some(b => b.stuck)) {
         ctx.fillStyle = "#ff8ca5";
         ctx.font = "bold 13px sans-serif";
@@ -3112,7 +3103,6 @@
         ctx.fillText("터치 또는 스페이스바로 공 발사! 🌸", canvas.width / 2, 275);
       }
 
-      // 6) 파편 파티클
       for (let i = brickParticles.length - 1; i >= 0; i--) {
         const pt = brickParticles[i];
         pt.x += pt.vx;
@@ -3144,8 +3134,260 @@
       }
     }
 
+    /* ---------- 11. 꼬리잡기 스네이크 (Snake) 상태 ---------- */
+    // 캔버스(340x410) 내 상단 HUD(46px) 제외 영역을 16x18 그리드(칸당 20px)로 구성
+    const SNAKE_CELL = 20;
+    const SNAKE_COLS = 16; // 16 * 20 = 320 (좌우 여백 10px씩)
+    const SNAKE_ROWS = 18; // 18 * 20 = 360 (상단 44px ~ 404px)
+    const SNAKE_OFFSET_X = 10;
+    const SNAKE_OFFSET_Y = 44;
+
+    let snakeRunning = false;
+    let snakeOver = false;
+    let snakeScore = 0;
+    let snakeBest = Number(localStorage.getItem("nakhwaSnakeBest") || 0);
+    let snakeBody = [];
+    let snakeDir = { x: 1, y: 0 };
+    let snakeDirQueue = [];
+    let snakeFood = { x: 10, y: 9, isBonus: false, timer: 0 };
+    let snakeLastStepTime = 0;
+    let snakeSessionHadBest = false;
+    let snakeSwipeStart = null;
+
+    function spawnSnakeFood() {
+      const occupied = new Set(snakeBody.map(seg => `${seg.x},${seg.y}`));
+      const freeCells = [];
+      for (let gx = 0; gx < SNAKE_COLS; gx++) {
+        for (let gy = 0; gy < SNAKE_ROWS; gy++) {
+          if (!occupied.has(`${gx},${gy}`)) {
+            freeCells.push({ x: gx, y: gy });
+          }
+        }
+      }
+      if (freeCells.length === 0) return;
+      const chosen = freeCells[Math.floor(Math.random() * freeCells.length)];
+      const isBonus = snakeBody.length >= 6 && Math.random() < 0.25;
+      snakeFood = {
+        x: chosen.x,
+        y: chosen.y,
+        isBonus,
+        timer: isBonus ? 90 : 0 // 보너스 보석은 90스텝 제한시간
+      };
+    }
+
+    function resetSnake() {
+      snakeBody = [
+        { x: 6, y: 9 },
+        { x: 5, y: 9 },
+        { x: 4, y: 9 }
+      ];
+      snakeDir = { x: 1, y: 0 };
+      snakeDirQueue = [];
+      snakeScore = 0;
+      snakeOver = false;
+      snakeRunning = true;
+      snakeSessionHadBest = false;
+      snakeSwipeStart = null;
+      snakeLastStepTime = performance.now();
+      isNewBestPending = false;
+      hideSubmitBar();
+      spawnSnakeFood();
+    }
+
+    function queueSnakeDirection(nx, ny) {
+      if (!snakeRunning || snakeOver) return;
+      const lastDir = snakeDirQueue.length > 0 ? snakeDirQueue[snakeDirQueue.length - 1] : snakeDir;
+      // 정반대 방향(180도 유턴) 및 동일 방향 중복 입력 방지
+      if ((nx === -lastDir.x && ny === -lastDir.y) || (nx === lastDir.x && ny === lastDir.y)) {
+        return;
+      }
+      if (snakeDirQueue.length < 2) {
+        snakeDirQueue.push({ x: nx, y: ny });
+      }
+    }
+
+    function stepSnakeLogic() {
+      if (!snakeRunning || snakeOver) return;
+
+      const now = performance.now();
+      // 길이가 길어질수록 이동 간격 단축 (145ms -> 최소 72ms)
+      const stepInterval = Math.max(72, 145 - (snakeBody.length - 3) * 2.4);
+      if (now - snakeLastStepTime < stepInterval) return;
+      snakeLastStepTime = now;
+
+      if (snakeDirQueue.length > 0) {
+        snakeDir = snakeDirQueue.shift();
+      }
+
+      const head = snakeBody[0];
+      const nextX = head.x + snakeDir.x;
+      const nextY = head.y + snakeDir.y;
+
+      // 외곽 벽 충돌 판정
+      if (nextX < 0 || nextX >= SNAKE_COLS || nextY < 0 || nextY >= SNAKE_ROWS) {
+        snakeOver = true;
+        triggerGameOver(snakeSessionHadBest, snakeScore > 0);
+        return;
+      }
+
+      const willEat = (nextX === snakeFood.x && nextY === snakeFood.y);
+      // 꼬리 충돌 판정 (먹지 않을 땐 맨 끝 꼬리가 빠지므로 제외)
+      const checkLimit = willEat ? snakeBody.length : snakeBody.length - 1;
+      for (let i = 0; i < checkLimit; i++) {
+        if (snakeBody[i].x === nextX && snakeBody[i].y === nextY) {
+          snakeOver = true;
+          triggerGameOver(snakeSessionHadBest, snakeScore > 0);
+          return;
+        }
+      }
+
+      snakeBody.unshift({ x: nextX, y: nextY });
+
+      if (willEat) {
+        snakeScore += snakeFood.isBonus ? 30 : 10;
+        if (snakeScore > snakeBest) {
+          snakeBest = snakeScore;
+          snakeSessionHadBest = true;
+          localStorage.setItem("nakhwaSnakeBest", String(snakeBest));
+        }
+        spawnSnakeFood();
+      } else {
+        snakeBody.pop();
+        if (snakeFood.isBonus) {
+          snakeFood.timer--;
+          if (snakeFood.timer <= 0) {
+            spawnSnakeFood();
+          }
+        }
+      }
+    }
+
+    function drawSnakeFrame() {
+      stepSnakeLogic();
+
+      // 1) 상단 HUD
+      ctx.fillStyle = "#f4f4f6";
+      ctx.font = "bold 13px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(`SCORE ${snakeScore}`, 12, 22);
+
+      ctx.fillStyle = "#ff8ca5";
+      ctx.font = "bold 11px sans-serif";
+      ctx.fillText(`길이 ${snakeBody.length}칸`, 12, 37);
+
+      ctx.fillStyle = "#9898a6";
+      ctx.textAlign = "right";
+      ctx.fillText(`BEST ${snakeBest}`, 328, 22);
+      ctx.fillText("스와이프 / 방향키", 328, 37);
+
+      // 2) 그리드 보드 배경
+      const boardW = SNAKE_COLS * SNAKE_CELL;
+      const boardH = SNAKE_ROWS * SNAKE_CELL;
+      ctx.fillStyle = "#16161d";
+      ctx.fillRect(SNAKE_OFFSET_X, SNAKE_OFFSET_Y, boardW, boardH);
+
+      // 체커보드 미세 타일
+      for (let r = 0; r < SNAKE_ROWS; r++) {
+        for (let c = 0; c < SNAKE_COLS; c++) {
+          if ((r + c) % 2 === 0) {
+            ctx.fillStyle = "rgba(255, 255, 255, 0.022)";
+            ctx.fillRect(
+              SNAKE_OFFSET_X + c * SNAKE_CELL,
+              SNAKE_OFFSET_Y + r * SNAKE_CELL,
+              SNAKE_CELL,
+              SNAKE_CELL
+            );
+          }
+        }
+      }
+
+      ctx.strokeStyle = "#343442";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(SNAKE_OFFSET_X, SNAKE_OFFSET_Y, boardW, boardH);
+
+      // 3) 먹이 (삼색 경단 or 황금 벚꽃 보석)
+      const fx = SNAKE_OFFSET_X + snakeFood.x * SNAKE_CELL + SNAKE_CELL / 2;
+      const fy = SNAKE_OFFSET_Y + snakeFood.y * SNAKE_CELL + SNAKE_CELL / 2;
+
+      if (snakeFood.isBonus) {
+        // 황금 벚꽃 보석 (+30점)
+        ctx.fillStyle = "#ffd166";
+        ctx.beginPath();
+        ctx.moveTo(fx, fy - 8);
+        ctx.lineTo(fx + 8, fy);
+        ctx.lineTo(fx, fy + 8);
+        ctx.lineTo(fx - 8, fy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      } else {
+        // 벚꽃 경단 (+10점)
+        ctx.fillStyle = "#ffb7c5";
+        ctx.beginPath();
+        ctx.arc(fx, fy, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(fx - 2, fy - 2, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 4) 스네이크 몸통 & 머리 그리기 (꼬리부터 머리 역순으로 그려 머리가 위에 오도록)
+      for (let i = snakeBody.length - 1; i >= 0; i--) {
+        const seg = snakeBody[i];
+        const sx = SNAKE_OFFSET_X + seg.x * SNAKE_CELL;
+        const sy = SNAKE_OFFSET_Y + seg.y * SNAKE_CELL;
+
+        if (i === 0) {
+          // 머리
+          ctx.fillStyle = "#e65c7b";
+          ctx.beginPath();
+          ctx.roundRect(sx + 1, sy + 1, SNAKE_CELL - 2, SNAKE_CELL - 2, 6);
+          ctx.fill();
+
+          // 진행 방향에 맞춘 두 눈
+          ctx.fillStyle = "#ffffff";
+          const eye1X = sx + SNAKE_CELL / 2 + snakeDir.x * 4 - (snakeDir.y !== 0 ? 4 : 0);
+          const eye1Y = sy + SNAKE_CELL / 2 + snakeDir.y * 4 - (snakeDir.x !== 0 ? 4 : 0);
+          const eye2X = sx + SNAKE_CELL / 2 + snakeDir.x * 4 + (snakeDir.y !== 0 ? 4 : 0);
+          const eye2Y = sy + SNAKE_CELL / 2 + snakeDir.y * 4 + (snakeDir.x !== 0 ? 4 : 0);
+          ctx.beginPath(); ctx.arc(eye1X, eye1Y, 2.2, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(eye2X, eye2Y, 2.2, 0, Math.PI * 2); ctx.fill();
+        } else {
+          // 꼬리로 갈수록 크기가 미세하게 줄어들고 색상이 교차됨
+          const shrink = Math.min(4, Math.floor(i / 4));
+          const pad = 2 + shrink * 0.5;
+          ctx.fillStyle = i % 2 === 1 ? "#ff8ca5" : "#ffb7c5";
+          ctx.beginPath();
+          ctx.roundRect(sx + pad, sy + pad, SNAKE_CELL - pad * 2, SNAKE_CELL - pad * 2, 5);
+          ctx.fill();
+        }
+      }
+
+      if (snakeOver) {
+        ctx.fillStyle = "rgba(15, 15, 18, 0.78)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#f4f4f6";
+        ctx.font = "bold 20px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`🐍 충돌! 최종 ${snakeScore}점 (${snakeBody.length}칸)`, canvas.width / 2, 190);
+        if (isNewBestPending) {
+          ctx.fillStyle = "#ffd166";
+          ctx.font = "bold 13px sans-serif";
+          ctx.fillText("🎉 신기록! 아래에서 기록을 등록해 주세요", canvas.width / 2, 220);
+        } else {
+          ctx.fillStyle = "#ff8ca5";
+          ctx.font = "600 13px sans-serif";
+          ctx.fillText("화면을 터치하면 다시 시작합니다", canvas.width / 2, 220);
+        }
+      }
+    }
+
     /* ---------- 로비 <-> 플레이 화면 전환 ---------- */
     function updateLobbyBadges() {
+      document.getElementById("badgeSnake").textContent = `BEST ${snakeBest}점`;
       document.getElementById("badgeBrick").textContent = `BEST ${brickBest}점`;
       document.getElementById("badgePunch").textContent = `BEST ${punchBest}점`;
       document.getElementById("badgeGalaga").textContent = `BEST ${galagaBest}점`;
@@ -3168,10 +3410,12 @@
       galagaRunning = false;
       punchRunning = false;
       brickRunning = false;
+      snakeRunning = false;
       smashState = "idle";
       dodgePointerActive = false;
       galagaDragging = false;
       brickDragging = false;
+      snakeSwipeStart = null;
       gogunHolding = false;
       gogunHoldFrames = 0;
       gogunHook.active = false;
@@ -3207,11 +3451,15 @@
       lobbyView.classList.add("hidden");
       playView.classList.add("active");
 
-      setCanvasResolution(
-        game === "suika" || game === "smash" || game === "galaga" || game === "punch" || game === "brick"
-      );
+      const tallGames = ["suika", "smash", "galaga", "punch", "brick", "snake"];
+      setCanvasResolution(tallGames.includes(game));
 
-      if (game === "brick") {
+      if (game === "snake") {
+        playGameTitle.textContent = "🐍 꼬리잡기 스네이크";
+        easterHint.textContent = "상하좌우 스와이프(모바일) 또는 방향키/WASD(PC) 이동!";
+        rankingTitleEl.textContent = "🐍 꼬리잡기 TOP 5";
+        resetSnake();
+      } else if (game === "brick") {
         playGameTitle.textContent = "🧱 벚꽃 벽돌깨기";
         easterHint.textContent = "좌우 드래그(모바일) 또는 방향키(PC) · 스페이스바로 발사!";
         rankingTitleEl.textContent = "🧱 벚꽃 벽돌깨기 TOP 5";
@@ -3301,7 +3549,12 @@
     function handleCanvasAction() {
       if (!isInPlayScreen || document.activeElement === nickInput) return;
 
-      if (activeGame === "brick") {
+      if (activeGame === "snake") {
+        if (snakeOver || !snakeRunning) {
+          if (!canRestartNow()) return;
+          resetSnake();
+        }
+      } else if (activeGame === "brick") {
         if (brickOver || !brickRunning) {
           if (!canRestartNow()) return;
           resetBrick();
@@ -3348,6 +3601,7 @@
 
     /* ---------- Firebase 랭킹 연동 ---------- */
     function getDbNode() {
+      if (activeGame === "snake") return "snake_scores";
       if (activeGame === "brick") return "brick_scores";
       if (activeGame === "punch") return "punch_scores";
       if (activeGame === "galaga") return "galaga_scores";
@@ -3401,14 +3655,14 @@
 
           const scoreSpan = document.createElement("span");
           scoreSpan.className = "rank-score";
-          if (activeGame === "runner" || activeGame === "gogun" || activeGame === "suika" || activeGame === "galaga" || activeGame === "punch" || activeGame === "brick") {
-            scoreSpan.textContent = `${entry.score}점`;
-          } else if (activeGame === "slash") {
+          if (activeGame === "slash") {
             scoreSpan.textContent = `${(entry.score / 1000).toFixed(3)}초`;
           } else if (activeGame === "stack" || activeGame === "smash") {
             scoreSpan.textContent = `${entry.score}층`;
-          } else {
+          } else if (activeGame === "dodge") {
             scoreSpan.textContent = `${(entry.score / 1000).toFixed(2)}초`;
+          } else {
+            scoreSpan.textContent = `${entry.score}점`;
           }
 
           li.appendChild(left);
@@ -3429,7 +3683,8 @@
       }
 
       let currentRecord = 0;
-      if (activeGame === "brick") currentRecord = brickScore;
+      if (activeGame === "snake") currentRecord = snakeScore;
+      else if (activeGame === "brick") currentRecord = brickScore;
       else if (activeGame === "punch") currentRecord = punchScore;
       else if (activeGame === "galaga") currentRecord = galagaScore;
       else if (activeGame === "smash") currentRecord = smashTargetFloors;
@@ -3503,6 +3758,16 @@
     canvas.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       if (!isInPlayScreen) return;
+
+      if (activeGame === "snake") {
+        if (snakeOver || !snakeRunning) {
+          if (!canRestartNow()) return;
+          resetSnake();
+          return;
+        }
+        snakeSwipeStart = { x: e.clientX, y: e.clientY };
+        return;
+      }
 
       if (activeGame === "brick") {
         if (brickOver || !brickRunning) {
@@ -3581,6 +3846,22 @@
     canvas.addEventListener("pointermove", (e) => {
       if (!isInPlayScreen) return;
 
+      if (activeGame === "snake" && snakeSwipeStart && !snakeOver) {
+        e.preventDefault();
+        const dx = e.clientX - snakeSwipeStart.x;
+        const dy = e.clientY - snakeSwipeStart.y;
+        if (Math.hypot(dx, dy) >= 18) {
+          if (Math.abs(dx) > Math.abs(dy)) {
+            queueSnakeDirection(dx > 0 ? 1 : -1, 0);
+          } else {
+            queueSnakeDirection(0, dy > 0 ? 1 : -1);
+          }
+          // 연속 스와이프도 바로 반응하도록 기준점 갱신
+          snakeSwipeStart = { x: e.clientX, y: e.clientY };
+        }
+        return;
+      }
+
       if (activeGame === "brick" && brickDragging && !brickOver) {
         e.preventDefault();
         const rect = canvas.getBoundingClientRect();
@@ -3629,6 +3910,7 @@
       dodgePointerActive = false;
       galagaDragging = false;
       brickDragging = false;
+      snakeSwipeStart = null;
       if (isInPlayScreen && activeGame === "gogun") {
         handleGogunPressEnd();
       }
@@ -3642,6 +3924,7 @@
       dodgePointerActive = false;
       galagaDragging = false;
       brickDragging = false;
+      snakeSwipeStart = null;
       suikaAiming = false;
       if (isInPlayScreen && activeGame === "gogun") {
         handleGogunPressEnd();
@@ -4310,7 +4593,9 @@
       if (isInPlayScreen) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        if (activeGame === "brick") {
+        if (activeGame === "snake") {
+          drawSnakeFrame();
+        } else if (activeGame === "brick") {
           drawBrickFrame();
         } else if (activeGame === "punch") {
           drawPunchFrame();
@@ -4344,6 +4629,13 @@
         return;
       }
 
+      if (activeGame === "snake") {
+        if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { e.preventDefault(); queueSnakeDirection(0, -1); return; }
+        if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") { e.preventDefault(); queueSnakeDirection(0, 1); return; }
+        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); queueSnakeDirection(-1, 0); return; }
+        if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); queueSnakeDirection(1, 0); return; }
+      }
+
       if (activeGame === "punch") {
         if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
           e.preventDefault();
@@ -4375,7 +4667,7 @@
         return;
       }
 
-      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && e.key === "ArrowUp")) {
+      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && activeGame !== "snake" && e.key === "ArrowUp")) {
         e.preventDefault();
         if (activeGame === "smash" && e.repeat) return;
         handleCanvasAction();
