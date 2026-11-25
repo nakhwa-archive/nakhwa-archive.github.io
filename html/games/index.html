@@ -1714,45 +1714,72 @@
       }
     });
 
-    function gameLoop() {
-      if (isInPlayScreen) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    /* ---------- 60fps 주사율 정규화 메인 루프 ---------- */
+    const TARGET_FPS = 60;
+    const STEP_MS = 1000 / TARGET_FPS;
+    let lastFrameTime = performance.now();
+    let frameAccumMs = 0;
 
-        if (activeGame === "barricade") {
-          drawBarricadeFrame();
-        } else if (activeGame === "bubble") {
-          drawBubbleFrame();
-        } else if (activeGame === "archery") {
-          drawArcheryFrame();
-        } else if (activeGame === "lighthouse") {
-          drawLighthouseFrame();
-        } else if (activeGame === "racer") {
-          drawRacerFrame();
-        } else if (activeGame === "enhance") {
-          drawEnhanceFrame();
-        } else if (activeGame === "snake") {
-          drawSnakeFrame();
-        } else if (activeGame === "brick") {
-          drawBrickFrame();
-        } else if (activeGame === "punch") {
-          drawPunchFrame();
-        } else if (activeGame === "galaga") {
-          drawGalagaFrame();
-        } else if (activeGame === "smash") {
-          drawSmashFrame();
-        } else if (activeGame === "suika") {
-          drawSuikaFrame();
-        } else if (activeGame === "runner") {
-          drawRunnerFrame();
-        } else if (activeGame === "slash") {
-          drawSlashFrame();
-        } else if (activeGame === "stack") {
-          drawStackFrame();
-        } else if (activeGame === "dodge") {
-          drawDodgeFrame();
-        } else {
-          drawGogunFrame();
+    function renderActiveGameFrame() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (activeGame === "barricade") {
+        drawBarricadeFrame();
+      } else if (activeGame === "bubble") {
+        drawBubbleFrame();
+      } else if (activeGame === "archery") {
+        drawArcheryFrame();
+      } else if (activeGame === "lighthouse") {
+        drawLighthouseFrame();
+      } else if (activeGame === "racer") {
+        drawRacerFrame();
+      } else if (activeGame === "enhance") {
+        drawEnhanceFrame();
+      } else if (activeGame === "snake") {
+        drawSnakeFrame();
+      } else if (activeGame === "brick") {
+        drawBrickFrame();
+      } else if (activeGame === "punch") {
+        drawPunchFrame();
+      } else if (activeGame === "galaga") {
+        drawGalagaFrame();
+      } else if (activeGame === "smash") {
+        drawSmashFrame();
+      } else if (activeGame === "suika") {
+        drawSuikaFrame();
+      } else if (activeGame === "runner") {
+        drawRunnerFrame();
+      } else if (activeGame === "slash") {
+        drawSlashFrame();
+      } else if (activeGame === "stack") {
+        drawStackFrame();
+      } else if (activeGame === "dodge") {
+        drawDodgeFrame();
+      } else {
+        drawGogunFrame();
+      }
+    }
+
+    function gameLoop(now = performance.now()) {
+      const rawDelta = Math.max(0, Math.min(100, now - lastFrameTime));
+      lastFrameTime = now;
+
+      if (isInPlayScreen) {
+        frameAccumMs += rawDelta;
+        let steps = 0;
+        const maxStepsPerTick = 3;
+
+        while (frameAccumMs >= STEP_MS && steps < maxStepsPerTick) {
+          renderActiveGameFrame();
+          frameAccumMs -= STEP_MS;
+          steps++;
         }
+
+        if (frameAccumMs > STEP_MS * 2) {
+          frameAccumMs = 0;
+        }
+      } else {
+        frameAccumMs = 0;
       }
 
       requestAnimationFrame(gameLoop);
@@ -1848,7 +1875,7 @@
 
     history.replaceState({ view: "lobby" }, "", window.location.pathname);
     updateLobbyBadges();
-    gameLoop();
+    requestAnimationFrame(gameLoop);
   </script>
 </body>
 </html>
