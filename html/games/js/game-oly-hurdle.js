@@ -101,7 +101,7 @@ function jumpOlyHurdle() {
   if (!olyHurdleRunning || olyHurdleOver || olyHurdleFinished) return;
   if (olyHurdleJumpZ > 0) return; // 공중 이중점프 방지
 
-  olyHurdleJumpVz = 6.6;
+  olyHurdleJumpVz = 4.2;
   olyHurdleJumpZ = 1;
   spawnOlyHurdleBurst(85, 294, "#ffd166", 6);
 }
@@ -135,7 +135,7 @@ function drawOlyHurdleFrame() {
 
       if (olyHurdleJumpZ > 0 || olyHurdleJumpVz !== 0) {
         olyHurdleJumpZ += olyHurdleJumpVz;
-        olyHurdleJumpVz -= 0.36;
+        olyHurdleJumpVz -= 0.34;
         if (olyHurdleJumpZ <= 0) {
           olyHurdleJumpZ = 0;
           olyHurdleJumpVz = 0;
@@ -158,10 +158,10 @@ function drawOlyHurdleFrame() {
         const diffM = hDist - olyHurdleDist;
 
         if (Math.abs(diffM) < 0.75) {
-          if (olyHurdleJumpZ >= 16) {
+          if (olyHurdleJumpZ >= 10) {
             olyHurdleClearedSet[i] = true;
             olyHurdleBoost = Math.min(100, olyHurdleBoost + 8);
-            addOlyHurdlePopup(85, 232 - olyHurdleJumpZ, "✨ CLEAR!", "#72efdd");
+            addOlyHurdlePopup(85, 242 - olyHurdleJumpZ, "✨ CLEAR!", "#72efdd");
           } else {
             olyHurdleClearedSet[i] = true;
             olyHurdleStumbleFrames = 22;
@@ -206,13 +206,9 @@ function drawOlyHurdleFrame() {
 
       ctx.fillStyle = "#f4f4f6";
       ctx.fillRect(hx - 2, trackBaseY - 14, 4, 24);
-      ctx.fillStyle = olyHurdleClearedSet[iIndexOrFallback(idx)] ? "#72efdd" : "#ffd166";
+      ctx.fillStyle = olyHurdleClearedSet[idx] ? "#72efdd" : "#ffd166";
       ctx.fillRect(hx - 10, trackBaseY - 16, 20, 5);
     });
-
-    function iIndexOrFallback(idx) {
-      return idx;
-    }
 
     // 결승선
     if (olyHurdleDist >= 96) {
@@ -226,7 +222,7 @@ function drawOlyHurdleFrame() {
       }
     }
 
-    // 하단 조작 가이드 존 (문구 길이 축소로 중앙선 겹침 방지)
+    // 하단 조작 가이드 존
     ctx.fillStyle = "#161822";
     ctx.fillRect(0, 340, canvas.width, canvas.height - 340);
     ctx.strokeStyle = "#2b2e3d";
