@@ -107,7 +107,6 @@
       padding: 16px 12px;
     }
 
-    /* 1. 게임 선택 로비 화면 */
     .lobby-intro {
       margin-bottom: 14px;
       padding: 14px 16px;
@@ -210,7 +209,6 @@
       flex-shrink: 0;
     }
 
-    /* 2. 게임 플레이 화면 */
     .play-view {
       display: none;
     }
@@ -298,7 +296,6 @@
       margin: 0 auto;
     }
 
-    /* 전체화면 */
     .arcade-card.is-fullscreen {
       position: fixed;
       top: 0;
@@ -354,7 +351,6 @@
       color: var(--text-sub);
     }
 
-    /* 점수 등록 바 */
     .score-submit-bar {
       display: none;
       flex-direction: column;
@@ -446,7 +442,6 @@
       display: inline-block;
     }
 
-    /* 실시간 랭킹 보드 */
     .ranking-board {
       margin-top: 14px;
       background: #141418;
@@ -550,221 +545,14 @@
   </header>
 
   <main>
-    <!-- 1. 게임 목록 로비 화면 -->
     <section id="lobbyView" class="lobby-view">
       <div class="lobby-intro">
-        <h2>🎮 미니게임 선택 (총 17종)</h2>
+        <h2 id="lobbyCountTitle">🎮 미니게임 선택</h2>
         <p>원하는 게임을 선택해 길드원들과 랭킹을 겨뤄보세요!</p>
       </div>
-
-      <div class="game-grid">
-        <button type="button" class="game-card" data-game="barricade">
-          <div class="game-icon-box">🧟</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 좀비 바리케이드</span>
-              <span class="game-best-badge" id="badgeBarricade">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">산탄·관통탄으로 바리케이드 앞 좀비 무리 방어!</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="bubble">
-          <div class="game-icon-box">🫧</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">거품 팡팡 버블 팝</span>
-              <span class="game-best-badge" id="badgeBubble">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">같은 색 거품 연쇄 폭발! 30초 순발력 타임어택</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="archery">
-          <div class="game-icon-box">🏹</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 궁술 명중</span>
-              <span class="game-best-badge" id="badgeArchery">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">바람과 움직임을 읽어 정중앙 불스아이 명중!</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="lighthouse">
-          <div class="game-icon-box">🔦</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 등대 수비대</span>
-              <span class="game-best-badge" id="badgeLighthouse">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">빛줄기를 회전시켜 어둠 속 요괴들을 정화하는 디펜스</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="racer">
-          <div class="game-icon-box">🏎️</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 터보 레이서</span>
-              <span class="game-best-badge" id="badgeRacer">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">4차선 고속도로 질주 & 니트로 부스터로 차량 추월!</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="enhance">
-          <div class="game-icon-box">🔨</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 무기 강화</span>
-              <span class="game-best-badge" id="badgeEnhance">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">파괴 확률을 뚫고 전설의 낙화신검을 제련하라!</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="snake">
-          <div class="game-icon-box">🐍</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">꼬리잡기 스네이크</span>
-              <span class="game-best-badge" id="badgeSnake">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">경단과 벚꽃 보석을 먹으며 꼬리 길게 늘리기</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="brick">
-          <div class="game-icon-box">🧱</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">벚꽃 벽돌깨기</span>
-              <span class="game-best-badge" id="badgeBrick">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">패들로 공을 튕겨 아이템과 함께 블록 격파!</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="punch">
-          <div class="game-icon-box">🥊</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 펀치아웃</span>
-              <span class="game-best-badge" id="badgePunch">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">상대의 예비 동작을 피하고 빈틈에 카운터 어퍼컷!</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="galaga">
-          <div class="game-icon-box">🚀</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 갤러그</span>
-              <span class="game-best-badge" id="badgeGalaga">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">돌격해 오는 적 편대를 격추하는 레트로 슈팅</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="smash">
-          <div class="game-icon-box">🏢</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">건물 부수기</span>
-              <span class="game-best-badge" id="badgeSmash">BEST 0층</span>
-            </div>
-            <p class="game-card-desc">연타로 기를 모아 일격에 초고층 빌딩 박살내기</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="suika">
-          <div class="game-icon-box">🍉</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 수박게임</span>
-              <span class="game-best-badge" id="badgeSuika">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">같은 과일·꽃을 합쳐 거대한 수박과 만개 벚꽃 만들기</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="runner">
-          <div class="game-icon-box">🌸</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 러너</span>
-              <span class="game-best-badge" id="badgeRunner">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">가시 바위를 점프로 피하며 끝없이 달리기</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="slash">
-          <div class="game-icon-box">⚔️</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 발도술</span>
-              <span class="game-best-badge" id="badgeSlash">BEST --.---</span>
-            </div>
-            <p class="game-card-desc">찰나의 신호를 포착해 베는 반응속도 승부</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="stack">
-          <div class="game-icon-box">🍡</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">경단 쌓기</span>
-              <span class="game-best-badge" id="badgeStack">BEST 0층</span>
-            </div>
-            <p class="game-card-desc">타이밍 맞춰 삼색 경단을 하늘 높이 쌓기</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="dodge">
-          <div class="game-icon-box">💥</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 닷지</span>
-              <span class="game-best-badge" id="badgeDodge">BEST 0.00초</span>
-            </div>
-            <p class="game-card-desc">사방에서 날아오는 탄막 사이에서 오래 버티기</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-
-        <button type="button" class="game-card" data-game="gogun">
-          <div class="game-icon-box">🪝</div>
-          <div class="game-card-body">
-            <div class="game-card-top">
-              <span class="game-card-title">낙화 고군분투</span>
-              <span class="game-best-badge" id="badgeGogun">BEST 0점</span>
-            </div>
-            <p class="game-card-desc">기와지붕 위에서 갈고리 와이어로 스윙 액션</p>
-          </div>
-          <span class="game-arrow">▶</span>
-        </button>
-      </div>
+      <div class="game-grid" id="gameGrid"></div>
     </section>
 
-    <!-- 2. 게임 플레이 화면 -->
     <section id="playView" class="play-view">
       <div class="arcade-card" id="arcadeCard">
         <div class="play-header-bar">
@@ -780,7 +568,6 @@
         </div>
         <p class="easter-hint" id="easterHint">화면 터치 또는 스페이스바(↑)로 점프!</p>
 
-        <!-- 기록 등록 바 -->
         <div class="score-submit-bar" id="scoreSubmitBar">
           <div class="new-record-banner">🎉 신기록 달성! 기록을 등록해야 다시 시작할 수 있습니다</div>
           <div class="score-input-row">
@@ -790,7 +577,6 @@
           </div>
         </div>
 
-        <!-- 실시간 TOP 5 랭킹 -->
         <div class="ranking-board">
           <div class="ranking-header">
             <span id="rankingTitle">🏆 낙화 러너 TOP 5</span>
@@ -807,13 +593,15 @@
     </footer>
   </main>
 
-  <!-- 공통 상태 및 캔버스 초기화 -->
+  <!-- 공통 상태 및 레지스트리 코어 -->
   <script>
     const CONFIG = {
       firebaseDbUrl: "https://nakhwa-a90f6-default-rtdb.firebaseio.com"
     };
 
     const lobbyView = document.getElementById("lobbyView");
+    const lobbyCountTitle = document.getElementById("lobbyCountTitle");
+    const gameGrid = document.getElementById("gameGrid");
     const playView = document.getElementById("playView");
     const arcadeCard = document.getElementById("arcadeCard");
     const canvasStage = document.getElementById("canvasStage");
@@ -843,6 +631,34 @@
 
     let isNewBestPending = false;
     let gameOverLockUntil = 0;
+
+    // 자동 등록 저장소
+    window.NAKHWA_GAMES = [];
+    const GAME_MAP = {};
+
+    function registerGame(def) {
+      if (!def || !def.id) return;
+      const entry = Object.assign({
+        aspect: "tall",
+        sortOrder: "desc",
+        unit: "점",
+        stop: function () {}
+      }, def);
+      GAME_MAP[entry.id] = entry;
+      window.NAKHWA_GAMES.push(entry);
+    }
+
+    function getCurrentGameDef() {
+      return GAME_MAP[activeGame] || window.NAKHWA_GAMES[0] || null;
+    }
+
+    function getCanvasCoords(e) {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (canvas.width / rect.width),
+        y: (e.clientY - rect.top) * (canvas.height / rect.height)
+      };
+    }
 
     function hideSubmitBar() {
       scoreSubmitBar.classList.remove("active", "new-record");
@@ -907,32 +723,69 @@
     }
   </script>
 
-  <!-- 분리된 17개 미니게임 모듈 -->
+  <!-- 게임 스크립트들: 새 게임은 파일 1개 만들고 아래에 1줄만 추가 -->
+  <script src="./js/game-barricade.js"></script>
+  <script src="./js/game-bubble.js"></script>
+  <script src="./js/game-archery.js"></script>
+  <script src="./js/game-lighthouse.js"></script>
+  <script src="./js/game-racer.js"></script>
+  <script src="./js/game-enhance.js"></script>
+  <script src="./js/game-snake.js"></script>
+  <script src="./js/game-brick.js"></script>
+  <script src="./js/game-punch.js"></script>
+  <script src="./js/game-galaga.js"></script>
+  <script src="./js/game-smash.js"></script>
+  <script src="./js/game-suika.js"></script>
   <script src="./js/game-runner.js"></script>
   <script src="./js/game-slash.js"></script>
   <script src="./js/game-stack.js"></script>
   <script src="./js/game-dodge.js"></script>
   <script src="./js/game-gogun.js"></script>
-  <script src="./js/game-suika.js"></script>
-  <script src="./js/game-smash.js"></script>
-  <script src="./js/game-galaga.js"></script>
-  <script src="./js/game-punch.js"></script>
-  <script src="./js/game-brick.js"></script>
-  <script src="./js/game-snake.js"></script>
-  <script src="./js/game-enhance.js"></script>
-  <script src="./js/game-racer.js"></script>
-  <script src="./js/game-lighthouse.js"></script>
-  <script src="./js/game-archery.js"></script>
-  <script src="./js/game-bubble.js"></script>
-  <script src="./js/game-barricade.js"></script>
 
-  <!-- 로비 전환, Firebase 랭킹, 입력 & 메인 루프 -->
+  <!-- 로비 자동 생성, 랭킹, 입력 & 60fps 메인 루프 -->
   <script>
     const GAME_ASPECT = {
       wide: { w: 480, h: 205 },
       tall: { w: 340, h: 410 }
     };
     let currentAspect = GAME_ASPECT.tall;
+
+    function buildLobbyCards() {
+      gameGrid.innerHTML = "";
+      lobbyCountTitle.textContent = `🎮 미니게임 선택 (총 ${window.NAKHWA_GAMES.length}종)`;
+
+      window.NAKHWA_GAMES.forEach(g => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "game-card";
+        btn.setAttribute("data-game", g.id);
+
+        const badgeVal = typeof g.getBadge === "function" ? g.getBadge() : `BEST 0${g.unit}`;
+        btn.innerHTML = `
+          <div class="game-icon-box">${g.icon}</div>
+          <div class="game-card-body">
+            <div class="game-card-top">
+              <span class="game-card-title">${g.title}</span>
+              <span class="game-best-badge" id="badge-${g.id}">${badgeVal}</span>
+            </div>
+            <p class="game-card-desc">${g.desc}</p>
+          </div>
+          <span class="game-arrow">▶</span>
+        `;
+
+        btn.addEventListener("click", () => enterGame(g.id, true));
+        gameGrid.appendChild(btn);
+      });
+    }
+
+    function updateLobbyBadges() {
+      window.NAKHWA_GAMES.forEach(g => {
+        const el = document.getElementById(`badge-${g.id}`);
+        if (el && typeof g.getBadge === "function") {
+          el.textContent = g.getBadge();
+        }
+      });
+    }
 
     function fitCanvasExactAspect() {
       if (!isInPlayScreen) return;
@@ -982,44 +835,10 @@
       setTimeout(fitCanvasExactAspect, 120);
     });
 
-    function updateLobbyBadges() {
-      document.getElementById("badgeBarricade").textContent = `BEST ${bcBest}점`;
-      document.getElementById("badgeBubble").textContent = `BEST ${bubbleBest}점`;
-      document.getElementById("badgeArchery").textContent = `BEST ${archeryBest}점`;
-      document.getElementById("badgeLighthouse").textContent = `BEST ${lhBest}점`;
-      document.getElementById("badgeRacer").textContent = `BEST ${racerBest}점`;
-      document.getElementById("badgeEnhance").textContent = `BEST ${enhanceBest}점`;
-      document.getElementById("badgeSnake").textContent = `BEST ${snakeBest}점`;
-      document.getElementById("badgeBrick").textContent = `BEST ${brickBest}점`;
-      document.getElementById("badgePunch").textContent = `BEST ${punchBest}점`;
-      document.getElementById("badgeGalaga").textContent = `BEST ${galagaBest}점`;
-      document.getElementById("badgeSmash").textContent = `BEST ${smashBest}층`;
-      document.getElementById("badgeSuika").textContent = `BEST ${suikaBest}점`;
-      document.getElementById("badgeRunner").textContent = `BEST ${runnerBest}점`;
-      document.getElementById("badgeSlash").textContent =
-        slashBestMs > 0 ? `BEST ${(slashBestMs / 1000).toFixed(3)}초` : "BEST --.---";
-      document.getElementById("badgeStack").textContent = `BEST ${stackBest}층`;
-      document.getElementById("badgeDodge").textContent = `BEST ${(dodgeBestMs / 1000).toFixed(2)}초`;
-      document.getElementById("badgeGogun").textContent = `BEST ${gogunBest}점`;
-    }
-
     function stopAllGames() {
-      runnerRunning = false;
-      stackRunning = false;
-      dodgeRunning = false;
-      gogunRunning = false;
-      suikaRunning = false;
-      galagaRunning = false;
-      punchRunning = false;
-      brickRunning = false;
-      snakeRunning = false;
-      enhanceRunning = false;
-      racerRunning = false;
-      lhRunning = false;
-      archeryRunning = false;
-      bubbleRunning = false;
-      bcRunning = false;
-      smashState = "idle";
+      window.NAKHWA_GAMES.forEach(g => {
+        if (typeof g.stop === "function") g.stop();
+      });
       dodgePointerActive = false;
       galagaDragging = false;
       brickDragging = false;
@@ -1061,109 +880,29 @@
       }
     }
 
-    function enterGame(game, pushHistory = true) {
-      activeGame = game;
+    function enterGame(gameId, pushHistory = true) {
+      const g = GAME_MAP[gameId];
+      if (!g) return;
+
+      activeGame = g.id;
       isInPlayScreen = true;
       stopAllGames();
       hideSubmitBar();
 
       if (pushHistory) {
-        history.pushState({ view: "play", game }, "", `#${game}`);
+        history.pushState({ view: "play", game: g.id }, "", `#${g.id}`);
       }
 
       lobbyView.classList.add("hidden");
       playView.classList.add("active");
 
-      const tallGames = ["suika", "smash", "galaga", "punch", "brick", "snake", "enhance", "racer", "lighthouse", "archery", "bubble", "barricade"];
-      setCanvasResolution(tallGames.includes(game));
+      setCanvasResolution(g.aspect === "tall");
+      playGameTitle.textContent = `${g.icon} ${g.title}`;
+      easterHint.textContent = g.hint || "";
+      rankingTitleEl.textContent = g.rankingTitle || `🏆 ${g.title} TOP 5`;
 
-      if (game === "barricade") {
-        playGameTitle.textContent = "🧟 낙화 좀비 바리케이드";
-        easterHint.textContent = "터치/클릭 조준 사격(PC: ←→ + 스페이스) · 산탄/관통탄 상자 획득!";
-        rankingTitleEl.textContent = "🧟 좀비 바리케이드 TOP 5";
-        resetBarricade();
-      } else if (game === "bubble") {
-        playGameTitle.textContent = "🫧 거품 팡팡 버블 팝";
-        easterHint.textContent = "같은 색 거품을 연속 터치하면 연쇄 폭발! 가시 거품(💣)은 주의!";
-        rankingTitleEl.textContent = "🫧 버블 팝 TOP 5";
-        resetBubble();
-      } else if (game === "archery") {
-        playGameTitle.textContent = "🏹 낙화 궁술 명중";
-        easterHint.textContent = "터치 또는 스페이스바로 발사! 정중앙 명중 시 화살 +1발!";
-        rankingTitleEl.textContent = "🏹 궁술 명중 TOP 5";
-        resetArchery();
-      } else if (game === "lighthouse") {
-        playGameTitle.textContent = "🔦 낙화 등대 수비대";
-        easterHint.textContent = "터치·드래그(또는 ←→)로 빛 조준 · 100% 충전 시 섬광탄(스페이스)!";
-        rankingTitleEl.textContent = "🔦 등대 수비대 TOP 5";
-        resetLighthouse();
-      } else if (game === "racer") {
-        playGameTitle.textContent = "🏎️ 낙화 터보 레이서";
-        easterHint.textContent = "좌우 드래그(모바일) 또는 방향키/AD(PC)로 차량 추월!";
-        rankingTitleEl.textContent = "🏎️ 터보 레이서 TOP 5";
-        resetRacer();
-      } else if (game === "enhance") {
-        playGameTitle.textContent = "🔨 낙화 무기 강화";
-        easterHint.textContent = "강화하기(스페이스)로 단계 상승 · 파괴 전 판매 확정(S)으로 점수 획득!";
-        rankingTitleEl.textContent = "🔨 낙화 무기 강화 TOP 5";
-        resetEnhance();
-      } else if (game === "snake") {
-        playGameTitle.textContent = "🐍 꼬리잡기 스네이크";
-        easterHint.textContent = "상하좌우 스와이프(모바일) 또는 방향키/WASD(PC) 이동!";
-        rankingTitleEl.textContent = "🐍 꼬리잡기 TOP 5";
-        resetSnake();
-      } else if (game === "brick") {
-        playGameTitle.textContent = "🧱 벚꽃 벽돌깨기";
-        easterHint.textContent = "좌우 드래그(모바일) 또는 방향키(PC) · 스페이스바로 발사!";
-        rankingTitleEl.textContent = "🧱 벚꽃 벽돌깨기 TOP 5";
-        resetBrick();
-      } else if (game === "punch") {
-        playGameTitle.textContent = "🥊 낙화 펀치아웃";
-        easterHint.textContent = "좌/우 터치(←→)=회피 · 중앙 터치(↑/스페이스)=카운터 펀치!";
-        rankingTitleEl.textContent = "🥊 낙화 펀치아웃 TOP 5";
-        resetPunch();
-      } else if (game === "galaga") {
-        playGameTitle.textContent = "🚀 낙화 갤러그";
-        easterHint.textContent = "좌우 드래그(모바일) 또는 방향키(PC) 이동 · 자동 발사!";
-        rankingTitleEl.textContent = "🚀 낙화 갤러그 TOP 5";
-        resetGalaga();
-      } else if (game === "smash") {
-        playGameTitle.textContent = "🏢 건물 부수기";
-        easterHint.textContent = "5초간 미친 듯이 연타 후, 정중앙 타이밍에 맞춰 일격!";
-        rankingTitleEl.textContent = "🏢 건물 부수기 TOP 5";
-        resetSmash();
-      } else if (game === "suika") {
-        playGameTitle.textContent = "🍉 낙화 수박게임";
-        easterHint.textContent = "드래그로 위치 조준 후 손을 떼면 드롭! (PC: 방향키+스페이스)";
-        rankingTitleEl.textContent = "🍉 낙화 수박게임 TOP 5";
-        resetSuika();
-      } else if (game === "runner") {
-        playGameTitle.textContent = "🌸 낙화 러너";
-        easterHint.textContent = "화면 터치 또는 스페이스바(↑)로 점프!";
-        rankingTitleEl.textContent = "🏆 낙화 러너 TOP 5";
-        resetRunner();
-      } else if (game === "slash") {
-        playGameTitle.textContent = "⚔️ 낙화 발도술";
-        easterHint.textContent = "'⚔️ 베기!!' 신호가 뜨는 순간 가장 빠르게 터치!";
-        rankingTitleEl.textContent = "⚡ 낙화 발도술 TOP 5 (빠른 순)";
-        initPetals();
-        resetSlashToIdle();
-      } else if (game === "stack") {
-        playGameTitle.textContent = "🍡 경단 쌓기";
-        easterHint.textContent = "타이밍 맞춰 터치! 중앙에 맞추면 PERFECT 🌸";
-        rankingTitleEl.textContent = "🍡 경단 쌓기 TOP 5";
-        resetStack();
-      } else if (game === "dodge") {
-        playGameTitle.textContent = "💥 낙화 닷지";
-        easterHint.textContent = "드래그(모바일) 또는 방향키/WASD(PC)로 탄막 회피!";
-        rankingTitleEl.textContent = "💥 낙화 닷지 TOP 5 (생존 시간)";
-        resetDodge();
-      } else {
-        playGameTitle.textContent = "🪝 낙화 고군분투";
-        easterHint.textContent = "지붕 위에서 짧게 탭=점프 / 꾹 누르기=와이어 1회 스윙 🪝";
-        rankingTitleEl.textContent = "🪝 낙화 고군분투 TOP 5";
-        resetGogun();
-      }
+      if (typeof g.onEnter === "function") g.onEnter();
+      if (typeof g.reset === "function") g.reset();
 
       fetchLeaderboard();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -1178,120 +917,25 @@
       }
     });
 
-    document.querySelectorAll(".game-card").forEach(card => {
-      card.addEventListener("click", () => {
-        const game = card.getAttribute("data-game");
-        if (game) enterGame(game, true);
-      });
-    });
-
     btnBackToLobby.addEventListener("click", showLobby);
-
     btnSkipRecord.addEventListener("click", () => {
       isNewBestPending = false;
       hideSubmitBar();
     });
 
-    function handleCanvasAction() {
-      if (!isInPlayScreen || document.activeElement === nickInput) return;
-
-      if (activeGame === "barricade") {
-        fireBarricadeWeapon();
-      } else if (activeGame === "bubble") {
-        if (bubbleOver || !bubbleRunning) {
-          if (!canRestartNow()) return;
-          resetBubble();
-        }
-      } else if (activeGame === "archery") {
-        shootArcheryArrow();
-      } else if (activeGame === "lighthouse") {
-        if (lhOver || !lhRunning) {
-          if (!canRestartNow()) return;
-          resetLighthouse();
-        }
-      } else if (activeGame === "racer") {
-        if (racerOver || !racerRunning) {
-          if (!canRestartNow()) return;
-          resetRacer();
-        }
-      } else if (activeGame === "enhance") {
-        doEnhanceAttempt();
-      } else if (activeGame === "snake") {
-        if (snakeOver || !snakeRunning) {
-          if (!canRestartNow()) return;
-          resetSnake();
-        }
-      } else if (activeGame === "brick") {
-        if (brickOver || !brickRunning) {
-          if (!canRestartNow()) return;
-          resetBrick();
-          return;
-        }
-        launchStuckBrickBalls();
-      } else if (activeGame === "punch") {
-        punchAttack();
-      } else if (activeGame === "galaga") {
-        if (galagaOver || !galagaRunning) {
-          if (!canRestartNow()) return;
-          resetGalaga();
-        }
-      } else if (activeGame === "smash") {
-        handleSmashAction();
-      } else if (activeGame === "suika") {
-        if (suikaOver || !suikaRunning) {
-          if (!canRestartNow()) return;
-          resetSuika();
-          return;
-        }
-        dropSuikaBall();
-      } else if (activeGame === "runner") {
-        if (runnerOver || !runnerRunning) {
-          if (!canRestartNow()) return;
-          resetRunner();
-          return;
-        }
-        if (player.grounded) {
-          player.vy = player.jumpPower;
-          player.grounded = false;
-        }
-      } else if (activeGame === "slash") {
-        handleSlashAction();
-      } else if (activeGame === "stack") {
-        handleStackAction();
-      } else if (activeGame === "dodge") {
-        if (dodgeOver || !dodgeRunning) {
-          if (!canRestartNow()) return;
-          resetDodge();
-        }
-      }
-    }
-
-    function getDbNode() {
-      if (activeGame === "barricade") return "barricade_scores";
-      if (activeGame === "bubble") return "bubble_scores";
-      if (activeGame === "archery") return "archery_scores";
-      if (activeGame === "lighthouse") return "lighthouse_scores";
-      if (activeGame === "racer") return "racer_scores";
-      if (activeGame === "enhance") return "enhance_scores";
-      if (activeGame === "snake") return "snake_scores";
-      if (activeGame === "brick") return "brick_scores";
-      if (activeGame === "punch") return "punch_scores";
-      if (activeGame === "galaga") return "galaga_scores";
-      if (activeGame === "smash") return "smash_scores";
-      if (activeGame === "suika") return "suika_scores";
-      if (activeGame === "runner") return "runner_scores";
-      if (activeGame === "slash") return "slash_scores";
-      if (activeGame === "stack") return "stack_scores";
-      if (activeGame === "dodge") return "dodge_scores";
-      return "gogun_scores";
+    function formatScoreByGame(g, score) {
+      if (typeof g.formatScore === "function") return g.formatScore(score);
+      if (g.sortOrder === "asc") return `${(score / 1000).toFixed(3)}초`;
+      return `${score}${g.unit || "점"}`;
     }
 
     async function fetchLeaderboard() {
+      const g = getCurrentGameDef();
+      if (!g || !g.dbNode) return;
       rankingStatusEl.textContent = "불러오는 중...";
-      const dbNode = getDbNode();
 
       try {
-        const res = await fetch(`${CONFIG.firebaseDbUrl}/${dbNode}.json`);
+        const res = await fetch(`${CONFIG.firebaseDbUrl}/${g.dbNode}.json`);
         if (!res.ok) throw new Error("랭킹 로드 실패");
         const data = (await res.json()) || {};
 
@@ -1300,7 +944,7 @@
         );
 
         const sorted = validEntries
-          .sort((a, b) => activeGame === "slash" ? (a.score - b.score) : (b.score - a.score))
+          .sort((a, b) => g.sortOrder === "asc" ? (a.score - b.score) : (b.score - a.score))
           .slice(0, 5);
 
         rankingListEl.innerHTML = "";
@@ -1327,15 +971,7 @@
 
           const scoreSpan = document.createElement("span");
           scoreSpan.className = "rank-score";
-          if (activeGame === "slash") {
-            scoreSpan.textContent = `${(entry.score / 1000).toFixed(3)}초`;
-          } else if (activeGame === "stack" || activeGame === "smash") {
-            scoreSpan.textContent = `${entry.score}층`;
-          } else if (activeGame === "dodge") {
-            scoreSpan.textContent = `${(entry.score / 1000).toFixed(2)}초`;
-          } else {
-            scoreSpan.textContent = `${entry.score}점`;
-          }
+          scoreSpan.textContent = formatScoreByGame(g, entry.score);
 
           li.appendChild(left);
           li.appendChild(scoreSpan);
@@ -1348,49 +984,32 @@
     }
 
     async function submitScore() {
+      const g = getCurrentGameDef();
+      if (!g || !g.dbNode || typeof g.getScore !== "function") return;
+
       const rawName = nickInput.value.trim();
       if (!rawName) {
         nickInput.focus();
         return;
       }
 
-      let currentRecord = 0;
-      if (activeGame === "barricade") currentRecord = bcLastScore;
-      else if (activeGame === "bubble") currentRecord = bubbleLastScore;
-      else if (activeGame === "archery") currentRecord = archeryLastScore;
-      else if (activeGame === "lighthouse") currentRecord = lhLastScore;
-      else if (activeGame === "racer") currentRecord = racerLastScore;
-      else if (activeGame === "enhance") currentRecord = enhanceScore;
-      else if (activeGame === "snake") currentRecord = snakeScore;
-      else if (activeGame === "brick") currentRecord = brickScore;
-      else if (activeGame === "punch") currentRecord = punchScore;
-      else if (activeGame === "galaga") currentRecord = galagaScore;
-      else if (activeGame === "smash") currentRecord = smashTargetFloors;
-      else if (activeGame === "suika") currentRecord = suikaScore;
-      else if (activeGame === "runner") currentRecord = runnerLastScore;
-      else if (activeGame === "slash") currentRecord = slashReactionMs;
-      else if (activeGame === "stack") currentRecord = stackFloors;
-      else if (activeGame === "dodge") currentRecord = dodgeElapsedMs;
-      else currentRecord = gogunLastScore;
-
+      const currentRecord = Number(g.getScore() || 0);
       if (currentRecord <= 0) return;
 
       localStorage.setItem("nakhwaRunnerNick", rawName);
       btnSubmitScore.disabled = true;
       btnSubmitScore.textContent = "저장 중...";
 
-      const dbNode = getDbNode();
-
       try {
         const safeKey = getSafeKey(rawName);
         const encodedKey = encodeURIComponent(safeKey);
-        const url = `${CONFIG.firebaseDbUrl}/${dbNode}/${encodedKey}.json`;
+        const url = `${CONFIG.firebaseDbUrl}/${g.dbNode}/${encodedKey}.json`;
 
         const existingRes = await fetch(url);
         const existingData = await existingRes.json();
         const prevScore = existingData && typeof existingData.score === "number" ? existingData.score : 0;
 
-        const isNewRecord = activeGame === "slash"
+        const isNewRecord = g.sortOrder === "asc"
           ? (prevScore === 0 || currentRecord < prevScore)
           : (currentRecord > prevScore);
 
@@ -1406,11 +1025,7 @@
           });
           btnSubmitScore.textContent = "갱신 완료!";
         } else {
-          let prevLabel = `${prevScore}점`;
-          if (activeGame === "slash") prevLabel = `${(prevScore / 1000).toFixed(3)}초`;
-          else if (activeGame === "stack" || activeGame === "smash") prevLabel = `${prevScore}층`;
-          else if (activeGame === "dodge") prevLabel = `${(prevScore / 1000).toFixed(2)}초`;
-          btnSubmitScore.textContent = `기존 최고 ${prevLabel}`;
+          btnSubmitScore.textContent = `기존 최고 ${formatScoreByGame(g, prevScore)}`;
         }
 
         isNewBestPending = false;
@@ -1432,258 +1047,26 @@
       }
     });
 
-    /* ---------- 캔버스 포인터 이벤트 ---------- */
     canvas.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       if (!isInPlayScreen) return;
-
-      if (activeGame === "barricade") {
-        if (bcOver || !bcRunning) {
-          if (!canRestartNow()) return;
-          resetBarricade();
-          return;
-        }
-        const rect = canvas.getBoundingClientRect();
-        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-        aimBarricadeAt(cx, cy);
-        bcPointerDown = true;
-        fireBarricadeWeapon();
-        return;
+      const g = getCurrentGameDef();
+      const pt = getCanvasCoords(e);
+      if (g && typeof g.onPointerDown === "function") {
+        g.onPointerDown(pt.x, pt.y, e);
       }
-
-      if (activeGame === "bubble") {
-        const rect = canvas.getBoundingClientRect();
-        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-        handleBubbleTap(cx, cy);
-        return;
-      }
-
-      if (activeGame === "lighthouse") {
-        if (lhOver || !lhRunning) {
-          if (!canRestartNow()) return;
-          resetLighthouse();
-          return;
-        }
-        const rect = canvas.getBoundingClientRect();
-        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-        if (cy >= 365 && lhEnergy >= 100) {
-          triggerLhFlashBurst();
-          return;
-        }
-        lhPointerDown = true;
-        aimLighthouseAt(cx, cy);
-        return;
-      }
-
-      if (activeGame === "racer") {
-        if (racerOver || !racerRunning) {
-          if (!canRestartNow()) return;
-          resetRacer();
-          return;
-        }
-        racerDragging = true;
-        const rect = canvas.getBoundingClientRect();
-        racerLastDragX = (e.clientX - rect.left) * (canvas.width / rect.width);
-        return;
-      }
-
-      if (activeGame === "enhance") {
-        if (enhanceOver || !enhanceRunning) {
-          if (!canRestartNow()) return;
-          resetEnhance();
-          return;
-        }
-        const rect = canvas.getBoundingClientRect();
-        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-        if (cy >= 340 && cx >= 208) {
-          sellEnhanceWeapon();
-        } else {
-          doEnhanceAttempt();
-        }
-        return;
-      }
-
-      if (activeGame === "snake") {
-        if (snakeOver || !snakeRunning) {
-          if (!canRestartNow()) return;
-          resetSnake();
-          return;
-        }
-        snakeSwipeStart = { x: e.clientX, y: e.clientY };
-        return;
-      }
-
-      if (activeGame === "brick") {
-        if (brickOver || !brickRunning) {
-          if (!canRestartNow()) return;
-          resetBrick();
-          return;
-        }
-        launchStuckBrickBalls();
-        brickDragging = true;
-        const rect = canvas.getBoundingClientRect();
-        brickLastDragX = (e.clientX - rect.left) * (canvas.width / rect.width);
-        return;
-      }
-
-      if (activeGame === "punch") {
-        if (punchOver || !punchRunning) {
-          if (!canRestartNow()) return;
-          resetPunch();
-          return;
-        }
-        const rect = canvas.getBoundingClientRect();
-        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-        if (cx < canvas.width * 0.3) {
-          punchDodge("L");
-        } else if (cx > canvas.width * 0.7) {
-          punchDodge("R");
-        } else {
-          punchAttack();
-        }
-        return;
-      }
-
-      if (activeGame === "galaga") {
-        if (galagaOver || !galagaRunning) {
-          if (!canRestartNow()) return;
-          resetGalaga();
-          return;
-        }
-        galagaDragging = true;
-        const rect = canvas.getBoundingClientRect();
-        galagaLastDragX = (e.clientX - rect.left) * (canvas.width / rect.width);
-        return;
-      }
-
-      if (activeGame === "suika") {
-        if (suikaOver || !suikaRunning) {
-          if (!canRestartNow()) return;
-          resetSuika();
-          return;
-        }
-        suikaAiming = true;
-        const rect = canvas.getBoundingClientRect();
-        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-        suikaDropX = clampSuikaX(cx, suikaCurTier);
-        return;
-      }
-
-      if (activeGame === "dodge" && dodgeRunning && !dodgeOver) {
-        dodgePointerActive = true;
-        const rect = canvas.getBoundingClientRect();
-        dodgeLastPointer = {
-          x: (e.clientX - rect.left) * (canvas.width / rect.width),
-          y: (e.clientY - rect.top) * (canvas.height / rect.height)
-        };
-        return;
-      }
-
-      if (activeGame === "gogun") {
-        handleGogunPressStart();
-        return;
-      }
-
-      handleCanvasAction();
     });
 
     canvas.addEventListener("pointermove", (e) => {
       if (!isInPlayScreen) return;
-
-      if (activeGame === "barricade" && bcPointerDown && !bcOver) {
-        e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-        aimBarricadeAt(cx, cy);
-        return;
+      const g = getCurrentGameDef();
+      const pt = getCanvasCoords(e);
+      if (g && typeof g.onPointerMove === "function") {
+        g.onPointerMove(pt.x, pt.y, e);
       }
-
-      if (activeGame === "lighthouse" && lhPointerDown && !lhOver) {
-        e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const cy = (e.clientY - rect.top) * (canvas.height / rect.height);
-        aimLighthouseAt(cx, cy);
-        return;
-      }
-
-      if (activeGame === "racer" && racerDragging && !racerOver) {
-        e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const curX = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const dx = curX - racerLastDragX;
-        racerLastDragX = curX;
-        const minX = RACER_ROAD.left + racerCar.w / 2 + 3;
-        const maxX = RACER_ROAD.right - racerCar.w / 2 - 3;
-        racerCar.x = Math.max(minX, Math.min(maxX, racerCar.x + dx * 1.15));
-        return;
-      }
-
-      if (activeGame === "snake" && snakeSwipeStart && !snakeOver) {
-        e.preventDefault();
-        const dx = e.clientX - snakeSwipeStart.x;
-        const dy = e.clientY - snakeSwipeStart.y;
-        if (Math.hypot(dx, dy) >= 18) {
-          if (Math.abs(dx) > Math.abs(dy)) {
-            queueSnakeDirection(dx > 0 ? 1 : -1, 0);
-          } else {
-            queueSnakeDirection(0, dy > 0 ? 1 : -1);
-          }
-          snakeSwipeStart = { x: e.clientX, y: e.clientY };
-        }
-        return;
-      }
-
-      if (activeGame === "brick" && brickDragging && !brickOver) {
-        e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const curX = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const dx = curX - brickLastDragX;
-        brickLastDragX = curX;
-        const halfW = brickPaddle.w / 2;
-        brickPaddle.x = Math.max(halfW + 6, Math.min(canvas.width - halfW - 6, brickPaddle.x + dx * 1.15));
-        return;
-      }
-
-      if (activeGame === "galaga" && galagaDragging && !galagaOver) {
-        e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const curX = (e.clientX - rect.left) * (canvas.width / rect.width);
-        const dx = curX - galagaLastDragX;
-        galagaLastDragX = curX;
-        galagaShip.x = Math.max(18, Math.min(canvas.width - 18, galagaShip.x + dx * 1.15));
-        return;
-      }
-
-      if (activeGame === "suika" && suikaRunning && !suikaOver) {
-        if (suikaAiming || e.pointerType === "mouse") {
-          const rect = canvas.getBoundingClientRect();
-          const cx = (e.clientX - rect.left) * (canvas.width / rect.width);
-          suikaDropX = clampSuikaX(cx, suikaCurTier);
-        }
-        return;
-      }
-
-      if (activeGame !== "dodge" || !dodgePointerActive || dodgeOver) return;
-      e.preventDefault();
-      const rect = canvas.getBoundingClientRect();
-      const curX = (e.clientX - rect.left) * (canvas.width / rect.width);
-      const curY = (e.clientY - rect.top) * (canvas.height / rect.height);
-
-      const dx = curX - dodgeLastPointer.x;
-      const dy = curY - dodgeLastPointer.y;
-      dodgeLastPointer = { x: curX, y: curY };
-
-      dodgeShip.x = Math.max(dodgeShip.r + 4, Math.min(canvas.width - dodgeShip.r - 4, dodgeShip.x + dx * 1.15));
-      dodgeShip.y = Math.max(dodgeShip.r + 4, Math.min(canvas.height - dodgeShip.r - 4, dodgeShip.y + dy * 1.15));
     });
 
-    window.addEventListener("pointerup", () => {
+    function releasePointers(e) {
       dodgePointerActive = false;
       galagaDragging = false;
       brickDragging = false;
@@ -1691,30 +1074,16 @@
       lhPointerDown = false;
       bcPointerDown = false;
       snakeSwipeStart = null;
-      if (isInPlayScreen && activeGame === "gogun") {
-        handleGogunPressEnd();
+      if (!isInPlayScreen) return;
+      const g = getCurrentGameDef();
+      if (g && typeof g.onPointerUp === "function") {
+        g.onPointerUp(e);
       }
-      if (isInPlayScreen && activeGame === "suika" && suikaAiming) {
-        suikaAiming = false;
-        dropSuikaBall();
-      }
-    });
+    }
 
-    window.addEventListener("pointercancel", () => {
-      dodgePointerActive = false;
-      galagaDragging = false;
-      brickDragging = false;
-      racerDragging = false;
-      lhPointerDown = false;
-      bcPointerDown = false;
-      snakeSwipeStart = null;
-      suikaAiming = false;
-      if (isInPlayScreen && activeGame === "gogun") {
-        handleGogunPressEnd();
-      }
-    });
+    window.addEventListener("pointerup", releasePointers);
+    window.addEventListener("pointercancel", releasePointers);
 
-    /* ---------- 60fps 주사율 정규화 메인 루프 ---------- */
     const TARGET_FPS = 60;
     const STEP_MS = 1000 / TARGET_FPS;
     let lastFrameTime = performance.now();
@@ -1722,41 +1091,9 @@
 
     function renderActiveGameFrame() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      if (activeGame === "barricade") {
-        drawBarricadeFrame();
-      } else if (activeGame === "bubble") {
-        drawBubbleFrame();
-      } else if (activeGame === "archery") {
-        drawArcheryFrame();
-      } else if (activeGame === "lighthouse") {
-        drawLighthouseFrame();
-      } else if (activeGame === "racer") {
-        drawRacerFrame();
-      } else if (activeGame === "enhance") {
-        drawEnhanceFrame();
-      } else if (activeGame === "snake") {
-        drawSnakeFrame();
-      } else if (activeGame === "brick") {
-        drawBrickFrame();
-      } else if (activeGame === "punch") {
-        drawPunchFrame();
-      } else if (activeGame === "galaga") {
-        drawGalagaFrame();
-      } else if (activeGame === "smash") {
-        drawSmashFrame();
-      } else if (activeGame === "suika") {
-        drawSuikaFrame();
-      } else if (activeGame === "runner") {
-        drawRunnerFrame();
-      } else if (activeGame === "slash") {
-        drawSlashFrame();
-      } else if (activeGame === "stack") {
-        drawStackFrame();
-      } else if (activeGame === "dodge") {
-        drawDodgeFrame();
-      } else {
-        drawGogunFrame();
+      const g = getCurrentGameDef();
+      if (g && typeof g.draw === "function") {
+        g.draw();
       }
     }
 
@@ -1792,73 +1129,15 @@
         return;
       }
 
-      if (activeGame === "lighthouse" && e.code === "Space") {
-        e.preventDefault();
-        if (!e.repeat) triggerLhFlashBurst();
+      if (e.key === "Escape") {
+        if (isGameFullscreen) setGameFullscreen(false);
+        else showLobby();
         return;
       }
 
-      if (activeGame === "enhance") {
-        if (e.key === "s" || e.key === "S") {
-          e.preventDefault();
-          if (!e.repeat) sellEnhanceWeapon();
-          return;
-        }
-        if (e.code === "Space" || e.key === "Enter") {
-          e.preventDefault();
-          if (!e.repeat) doEnhanceAttempt();
-          return;
-        }
-      }
-
-      if (activeGame === "snake") {
-        if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { e.preventDefault(); queueSnakeDirection(0, -1); return; }
-        if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") { e.preventDefault(); queueSnakeDirection(0, 1); return; }
-        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); queueSnakeDirection(-1, 0); return; }
-        if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); queueSnakeDirection(1, 0); return; }
-      }
-
-      if (activeGame === "punch") {
-        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
-          e.preventDefault();
-          if (!e.repeat) punchDodge("L");
-          return;
-        }
-        if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
-          e.preventDefault();
-          if (!e.repeat) punchDodge("R");
-          return;
-        }
-        if (e.code === "Space" || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
-          e.preventDefault();
-          if (!e.repeat) punchAttack();
-          return;
-        }
-      }
-
-      if (activeGame === "dodge" || activeGame === "suika" || activeGame === "galaga" || activeGame === "brick" || activeGame === "racer" || activeGame === "lighthouse" || activeGame === "barricade") {
-        if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { e.preventDefault(); dodgeKeys.up = true; }
-        if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") { e.preventDefault(); dodgeKeys.down = true; }
-        if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
-        if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); dodgeKeys.right = true; }
-      }
-
-      if (activeGame === "gogun" && (e.code === "Space" || e.key === "ArrowUp")) {
-        e.preventDefault();
-        if (!e.repeat) handleGogunPressStart();
-        return;
-      }
-
-      if (e.code === "Space" || (activeGame !== "dodge" && activeGame !== "suika" && activeGame !== "galaga" && activeGame !== "punch" && activeGame !== "brick" && activeGame !== "snake" && activeGame !== "enhance" && activeGame !== "racer" && activeGame !== "lighthouse" && activeGame !== "bubble" && activeGame !== "barricade" && e.key === "ArrowUp")) {
-        e.preventDefault();
-        if (activeGame === "smash" && e.repeat) return;
-        handleCanvasAction();
-      } else if (e.key === "Escape") {
-        if (isGameFullscreen) {
-          setGameFullscreen(false);
-        } else {
-          showLobby();
-        }
+      const g = getCurrentGameDef();
+      if (g && typeof g.onKeyDown === "function") {
+        g.onKeyDown(e);
       }
     });
 
@@ -1868,11 +1147,14 @@
       if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") dodgeKeys.left = false;
       if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") dodgeKeys.right = false;
 
-      if (isInPlayScreen && activeGame === "gogun" && (e.code === "Space" || e.key === "ArrowUp")) {
-        handleGogunPressEnd();
+      if (!isInPlayScreen) return;
+      const g = getCurrentGameDef();
+      if (g && typeof g.onKeyUp === "function") {
+        g.onKeyUp(e);
       }
     });
 
+    buildLobbyCards();
     history.replaceState({ view: "lobby" }, "", window.location.pathname);
     updateLobbyBadges();
     requestAnimationFrame(gameLoop);
