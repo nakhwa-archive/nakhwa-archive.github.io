@@ -5,26 +5,25 @@ var olyHurdleFinished = false;
 
 var olyHurdleDist = 0; // 0 ~ 110m
 var olyHurdleSpeed = 0;
-var olyHurdleBoost = 0;
+var olyHurdleBoost = 0; // 0 ~ 100 리듬 가속 게이지
 var olyHurdleLastSide = 0;
 var olyHurdleLastStepFrame = 0;
 var olyHurdleFrame = 0;
 var olyHurdleElapsedFrames = 0;
 
-var olyHurdleY = 264;
-var olyHurdleVy = 0;
-var olyHurdleAirborne = false;
+var olyHurdleJumpZ = 0; // 점프 높이 (0이면 지면, >0이면 공중)
+var olyHurdleJumpVz = 0;
 var olyHurdleStumbleFrames = 0;
 
 var olyHurdleElapsedMs = 0;
 var olyHurdleLastScore = 0;
 var olyHurdleBestMs = Number(localStorage.getItem("nakhwaOlyHurdleBestMs") || 0);
-var olyHurdleList = [];
 var olyHurdleParticles = [];
 var olyHurdlePopups = [];
 
-var OLY_HURDLE_GROUND_Y = 264;
-var OLY_HURDLE_POSITIONS = [14, 23.5, 33, 42.5, 52, 61.5, 71, 80.5, 90, 99.5];
+// 허들 위치(m) 목록 (110m 레이스 기준 10개)
+var OLY_HURDLE_MARKS = [13.72, 22.86, 32.0, 41.14, 50.28, 59.42, 68.56, 77.7, 86.84, 95.98];
+var olyHurdleClearedSet = {};
 
 function resetOlyHurdle() {
   olyHurdleDist = 0;
@@ -34,20 +33,14 @@ function resetOlyHurdle() {
   olyHurdleLastStepFrame = 0;
   olyHurdleFrame = 0;
   olyHurdleElapsedFrames = 0;
-  olyHurdleY = OLY_HURDLE_GROUND_Y;
-  olyHurdleVy = 0;
-  olyHurdleAirborne = false;
+  olyHurdleJumpZ = 0;
+  olyHurdleJumpVz = 0;
   olyHurdleStumbleFrames = 0;
   olyHurdleElapsedMs = 0;
   olyHurdleLastScore = 0;
+  olyHurdleClearedSet = {};
   olyHurdleParticles = [];
   olyHurdlePopups = [];
-  olyHurdleList = OLY_HURDLE_POSITIONS.map((m, idx) => ({
-    id: idx,
-    dist: m,
-    cleared: false,
-    hit: false
-  }));
   olyHurdleOver = false;
   olyHurdleFinished = false;
   olyHurdleRunning = true;
@@ -59,10 +52,10 @@ function addOlyHurdlePopup(x, y, text, color) {
   olyHurdlePopups.push({ x, y, text, color, life: 34 });
 }
 
-function spawnOlyHurdleBurst(x, y, color, count = 8) {
+function spawnOlyHurdleBurst(x, y, color, count = 7) {
   for (let i = 0; i < count; i++) {
     const a = Math.random() * Math.PI * 2;
-    const sp = 1.2 + Math.random() * 2.5;
+    const sp = 1.2 + Math.random() * 2.4;
     olyHurdleParticles.push({
       x,
       y,
@@ -85,19 +78,19 @@ function stepOlyHurdleStride(side) {
   if (isAlternating) {
     if (diffFrames >= 4 && diffFrames <= 18) {
       olyHurdleBoost = Math.min(100, olyHurdleBoost + 14);
-      olyHurdleSpeed = Math.min(1.65, olyHurdleSpeed + 0.24);
+      olyHurdleSpeed = Math.min(1.75, olyHurdleSpeed + 0.24);
       if (diffFrames >= 7 && diffFrames <= 13) {
-        addOlyHurdlePopup(canvas.width * 0.5, 190, "⚡ RHYTHM!", "#ffd166");
+        addOlyHurdlePopup(canvas.width * 0.5, 192, "⚡ HURDLE RHYTHM!", "#72efdd");
       }
     } else {
       olyHurdleBoost = Math.min(100, olyHurdleBoost + 7);
-      olyHurdleSpeed = Math.min(1.45, olyHurdleSpeed + 0.16);
+      olyHurdleSpeed = Math.min(1.5, olyHurdleSpeed + 0.16);
     }
-    spawnOlyHurdleBurst(85, 292, "#ff8ca5", 4);
+    spawnOlyHurdleBurst(85, 294, "#ff8ca5", 4);
   } else {
     olyHurdleBoost = Math.max(0, olyHurdleBoost - 10);
     olyHurdleSpeed = Math.max(0.14, olyHurdleSpeed - 0.12);
-    addOlyHurdlePopup(canvas.width * 0.5, 206, "좌/우 교대!", "#9898a6");
+    addOlyHurdlePopup(canvas.width * 0.5, 208, "좌/우 교대!", "#9898a6");
   }
 
   olyHurdleLastSide = side;
@@ -106,11 +99,11 @@ function stepOlyHurdleStride(side) {
 
 function jumpOlyHurdle() {
   if (!olyHurdleRunning || olyHurdleOver || olyHurdleFinished) return;
-  if (olyHurdleAirborne || olyHurdleStumbleFrames > 0) return;
+  if (olyHurdleJumpZ > 0) return; // 공중 이중점프 방지
 
-  olyHurdleAirborne = true;
-  olyHurdleVy = -7.8;
-  spawnOlyHurdleBurst(85, 290, "#72efdd", 6);
+  olyHurdleJumpVz = 6.6;
+  olyHurdleJumpZ = 1;
+  spawnOlyHurdleBurst(85, 294, "#ffd166", 6);
 }
 
 function finishOlyHurdle() {
@@ -140,49 +133,45 @@ function drawOlyHurdleFrame() {
         olyHurdleStumbleFrames--;
       }
 
-      olyHurdleBoost = Math.max(0, olyHurdleBoost - 0.35);
-      const boostBonus = (olyHurdleBoost / 100) * 0.62;
-      const minSpeed = olyHurdleDist > 1 && olyHurdleStumbleFrames === 0 ? 0.12 : 0;
-      olyHurdleSpeed = Math.max(minSpeed, olyHurdleSpeed * 0.968);
-
-      const movePerStep = (olyHurdleSpeed + boostBonus) * 0.25;
-      olyHurdleDist = Math.min(110, olyHurdleDist + movePerStep);
-
-      // 수직 점프 물리
-      if (olyHurdleAirborne) {
-        olyHurdleY += olyHurdleVy;
-        olyHurdleVy += 0.44;
-        if (olyHurdleY >= OLY_HURDLE_GROUND_Y) {
-          olyHurdleY = OLY_HURDLE_GROUND_Y;
-          olyHurdleVy = 0;
-          olyHurdleAirborne = false;
+      if (olyHurdleJumpZ > 0 || olyHurdleJumpVz !== 0) {
+        olyHurdleJumpZ += olyHurdleJumpVz;
+        olyHurdleJumpVz -= 0.36;
+        if (olyHurdleJumpZ <= 0) {
+          olyHurdleJumpZ = 0;
+          olyHurdleJumpVz = 0;
         }
       }
 
-      // 허들 통과/충돌 판정 (주자 화면 기준 X = 85 근처)
-      const runnerDist = olyHurdleDist;
-      const footLift = Math.max(0, OLY_HURDLE_GROUND_Y - olyHurdleY);
+      olyHurdleBoost = Math.max(0, olyHurdleBoost - 0.35);
+      const boostBonus = (olyHurdleBoost / 100) * 0.65;
+      const minRunSpeed = olyHurdleDist > 0.5 ? 0.14 : 0;
+      const stumbleFactor = olyHurdleStumbleFrames > 0 ? 0.35 : 1.0;
 
-      for (const h of olyHurdleList) {
-        if (h.cleared || h.hit) continue;
-        const deltaDist = h.dist - runnerDist;
+      olyHurdleSpeed = Math.max(minRunSpeed, olyHurdleSpeed * 0.97);
+      const stepDist = (olyHurdleSpeed + boostBonus) * 0.32 * stumbleFactor;
+      olyHurdleDist = Math.min(110, olyHurdleDist + stepDist);
 
-        if (Math.abs(deltaDist) < 0.75) {
-          if (footLift >= 16) {
-            h.cleared = true;
-            olyHurdleBoost = Math.min(100, olyHurdleBoost + 12);
-            olyHurdleSpeed = Math.min(1.75, olyHurdleSpeed + 0.12);
-            addOlyHurdlePopup(85, olyHurdleY - 28, "✨ HURDLE CLEAR!", "#72efdd");
+      // 허들 충돌 및 통과 판정 (선수 위치 기준 85px = olyHurdleDist)
+      for (let i = 0; i < OLY_HURDLE_MARKS.length; i++) {
+        if (olyHurdleClearedSet[i]) continue;
+        const hDist = OLY_HURDLE_MARKS[i];
+        const diffM = hDist - olyHurdleDist;
+
+        if (Math.abs(diffM) < 0.75) {
+          if (olyHurdleJumpZ >= 16) {
+            olyHurdleClearedSet[i] = true;
+            olyHurdleBoost = Math.min(100, olyHurdleBoost + 8);
+            addOlyHurdlePopup(85, 232 - olyHurdleJumpZ, "✨ CLEAR!", "#72efdd");
           } else {
-            h.hit = true;
-            olyHurdleSpeed = Math.max(0.15, olyHurdleSpeed * 0.42);
+            olyHurdleClearedSet[i] = true;
+            olyHurdleStumbleFrames = 22;
+            olyHurdleSpeed = Math.max(0.18, olyHurdleSpeed * 0.45);
             olyHurdleBoost = Math.max(0, olyHurdleBoost - 25);
-            olyHurdleStumbleFrames = 14;
-            spawnOlyHurdleBurst(85, 282, "#ff4d6d", 10);
-            addOlyHurdlePopup(85, 242, "💥 걸림!", "#ff4d6d");
+            spawnOlyHurdleBurst(85, 274, "#ff4d6d", 10);
+            addOlyHurdlePopup(85, 226, "💥 걸림!", "#ff4d6d");
           }
-        } else if (deltaDist < -0.75) {
-          h.cleared = true;
+        } else if (diffM < -0.75) {
+          olyHurdleClearedSet[i] = true;
         }
       }
 
@@ -202,37 +191,42 @@ function drawOlyHurdleFrame() {
     ctx.fillRect(0, 130, canvas.width, 210);
 
     ctx.fillStyle = "rgba(255, 255, 255, 0.28)";
-    [132, 182, 232, 282, 336].forEach(yPos => {
+    [132, 184, 236, 288, 336].forEach(yPos => {
       ctx.fillRect(0, yPos, canvas.width, 2);
     });
 
-    // 허들 렌더링 (1m = 24px 기준, 주자 X = 85)
-    const pxPerMeter = 24;
-    for (const h of olyHurdleList) {
-      const hx = 85 + (h.dist - olyHurdleDist) * pxPerMeter;
-      if (hx < -30 || hx > canvas.width + 30) continue;
+    const pxPerMeter = 22;
+    const runnerX = 85;
+    const trackBaseY = 278;
 
-      // 허들 지주 & 가로바
-      ctx.fillStyle = h.hit ? "#ff4d6d" : "#f4f4f6";
-      ctx.fillRect(hx - 2, 268, 4, 26);
-      ctx.fillStyle = h.hit ? "#ff4d6d" : "#ffd166";
-      ctx.fillRect(hx - 10, 266, 20, 5);
+    // 허들 렌더링
+    OLY_HURDLE_MARKS.forEach((hDist, idx) => {
+      const hx = runnerX + (hDist - olyHurdleDist) * pxPerMeter;
+      if (hx < -30 || hx > canvas.width + 30) return;
+
+      ctx.fillStyle = "#f4f4f6";
+      ctx.fillRect(hx - 2, trackBaseY - 14, 4, 24);
+      ctx.fillStyle = olyHurdleClearedSet[iIndexOrFallback(idx)] ? "#72efdd" : "#ffd166";
+      ctx.fillRect(hx - 10, trackBaseY - 16, 20, 5);
+    });
+
+    function iIndexOrFallback(idx) {
+      return idx;
     }
 
-    // 결승선 (110m)
-    if (olyHurdleDist >= 94) {
-      const finishX = 85 + (110 - olyHurdleDist) * pxPerMeter;
+    // 결승선
+    if (olyHurdleDist >= 96) {
+      const finishX = runnerX + (110 - olyHurdleDist) * pxPerMeter;
       if (finishX >= 0 && finishX <= canvas.width) {
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(finishX, 130, 6, 210);
         ctx.fillStyle = "#ffd166";
+        ctx.fillRect(finishX, 130, 6, 210);
         ctx.font = "bold 12px sans-serif";
         ctx.textAlign = "center";
         ctx.fillText("110m FINISH", finishX + 3, 122);
       }
     }
 
-    // 하단 조작 가이드 존
+    // 하단 조작 가이드 존 (문구 길이 축소로 중앙선 겹침 방지)
     ctx.fillStyle = "#161822";
     ctx.fillRect(0, 340, canvas.width, canvas.height - 340);
     ctx.strokeStyle = "#2b2e3d";
@@ -244,37 +238,36 @@ function drawOlyHurdleFrame() {
     ctx.fillStyle = "#9898a6";
     ctx.font = "bold 11px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("◀ 좌 달리기 (←/A) · 위 점프(↑/Space)", canvas.width * 0.25, 376);
-    ctx.fillText("우 달리기 (→/D) · 위 점프(↑/Space) ▶", canvas.width * 0.75, 376);
+    ctx.fillText("◀ 좌 달리기 (←/A)", canvas.width * 0.25, 376);
+    ctx.fillText("우 달리기 (→/D) ▶", canvas.width * 0.75, 376);
 
-    // 주자 캐릭터 렌더링
-    const runnerX = 85;
-    const bob = olyHurdleAirborne ? 0 : Math.sin(olyHurdleFrame * 0.45) * (olyHurdleSpeed > 0.2 ? 3 : 0);
-    const drawY = olyHurdleY + bob;
-    const legSwing = olyHurdleAirborne ? 7 : Math.sin(olyHurdleFrame * 0.55) * (olyHurdleSpeed > 0.2 ? 9 : 1);
+    // 선수 캐릭터 렌더링
+    const bob = olyHurdleJumpZ === 0 ? Math.sin(olyHurdleFrame * 0.45) * (olyHurdleSpeed > 0.2 ? 3 : 0) : 0;
+    const drawY = trackBaseY - olyHurdleJumpZ + bob;
+    const legSwing = olyHurdleJumpZ > 0 ? 9 : Math.sin(olyHurdleFrame * 0.55) * (olyHurdleSpeed > 0.2 ? 10 : 1);
 
     ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
     ctx.beginPath();
-    ctx.ellipse(runnerX, 296, 16, 5, 0, 0, Math.PI * 2);
+    ctx.ellipse(runnerX, trackBaseY + 18, 15, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.strokeStyle = "#f4f4f6";
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(runnerX, drawY + 12);
-    ctx.lineTo(runnerX + legSwing, drawY + 28);
-    ctx.moveTo(runnerX, drawY + 12);
-    ctx.lineTo(runnerX - legSwing, drawY + 28);
+    ctx.moveTo(runnerX, drawY + 4);
+    ctx.lineTo(runnerX + legSwing, drawY + 18);
+    ctx.moveTo(runnerX, drawY + 4);
+    ctx.lineTo(runnerX - legSwing, drawY + 18);
     ctx.stroke();
 
-    ctx.fillStyle = olyHurdleStumbleFrames > 0 ? "#ffd166" : "#e65c7b";
+    ctx.fillStyle = olyHurdleStumbleFrames > 0 ? "#ff4d6d" : "#e65c7b";
     ctx.beginPath();
-    ctx.arc(runnerX, drawY + 4, 9, 0, Math.PI * 2);
+    ctx.arc(runnerX, drawY - 4, 9, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = "#72efdd";
     ctx.beginPath();
-    ctx.arc(runnerX + 2, drawY - 10, 8, 0, Math.PI * 2);
+    ctx.arc(runnerX + 2, drawY - 17, 7.5, 0, Math.PI * 2);
     ctx.fill();
 
     // 파티클 & 팝업
@@ -324,7 +317,7 @@ function drawOlyHurdleFrame() {
     const bestText = olyHurdleBestMs > 0 ? `${(olyHurdleBestMs / 1000).toFixed(3)}초` : "--.---";
     ctx.fillText(`BEST ${bestText}`, canvas.width - 12, 24);
 
-    // 완주 결과 오버레이
+    // 완주 오버레이
     if (olyHurdleFinished) {
       ctx.fillStyle = "rgba(15, 15, 18, 0.84)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -333,7 +326,7 @@ function drawOlyHurdleFrame() {
       ctx.fillStyle = "#f4f4f6";
       ctx.font = "bold 20px sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(`🚧 110m 허들 완주 · ${finalSec}초`, canvas.width / 2, 182);
+      ctx.fillText(`🚧 110m 허들 · ${finalSec}초`, canvas.width / 2, 182);
 
       if (isNewBestPending) {
         ctx.fillStyle = "#ffd166";
@@ -342,7 +335,7 @@ function drawOlyHurdleFrame() {
       } else {
         ctx.fillStyle = "#ff8ca5";
         ctx.font = "600 13px sans-serif";
-        ctx.fillText("터치 또는 스페이스바로 다시 도전", canvas.width / 2, 214);
+        ctx.fillText("터치 또는 스페이스바로 다시 레이스", canvas.width / 2, 214);
       }
     }
 
@@ -365,12 +358,12 @@ registerGame({
   id: "oly-hurdle",
   title: "110미터 허들",
   icon: "🚧",
-  desc: "좌우 리듬 질주와 타이밍 점프로 10개 허들 돌파!",
+  desc: "좌우 교대 가속과 허들 점프로 110m 트랙을 가장 빨리 돌파!",
   aspect: "tall",
   sortOrder: "asc",
   unit: "초",
   hint: "좌/우 번갈아 달리기 · 허들 앞에선 위쪽 터치(PC: ↑/W/Space)로 점프!",
-  rankingTitle: "🚧 110m 허들 TOP 5 (빠른 순)",
+  rankingTitle: "🚧 110미터 허들 TOP 5 (빠른 순)",
   dbNode: "oly_hurdle_scores",
   formatScore: (score) => `${(score / 1000).toFixed(3)}초`,
   getBadge: () => (olyHurdleBestMs > 0 ? `BEST ${(olyHurdleBestMs / 1000).toFixed(3)}초` : "BEST --.---"),
