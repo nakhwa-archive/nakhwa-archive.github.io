@@ -437,3 +437,31 @@ function drawArcheryFrame() {
     }
   }
 }
+
+registerGame({
+  id: "archery",
+  title: "낙화 궁술 명중",
+  icon: "🏹",
+  desc: "바람과 움직임을 읽어 정중앙 불스아이 명중!",
+  aspect: "tall",
+  unit: "점",
+  hint: "터치 또는 스페이스바로 발사! 정중앙 명중 시 화살 +1발!",
+  rankingTitle: "🏹 궁술 명중 TOP 5",
+  dbNode: "archery_scores",
+  getBadge: () => `BEST ${archeryBest}점`,
+  getScore: () => archeryLastScore,
+  reset: resetArchery,
+  draw: drawArcheryFrame,
+  stop: () => {
+    archeryRunning = false;
+  },
+  onPointerDown: () => {
+    shootArcheryArrow();
+  },
+  onKeyDown: (e) => {
+    if (e.code === "Space" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!e.repeat) shootArcheryArrow();
+    }
+  }
+});
