@@ -203,3 +203,31 @@ function drawStackFrame() {
     }
   }
 }
+
+registerGame({
+  id: "stack",
+  title: "경단 쌓기",
+  icon: "🍡",
+  desc: "타이밍 맞춰 삼색 경단을 하늘 높이 쌓기",
+  aspect: "tall",
+  unit: "층",
+  hint: "타이밍 맞춰 터치! 중앙에 맞추면 PERFECT 🌸",
+  rankingTitle: "🍡 경단 쌓기 TOP 5",
+  dbNode: "stack_scores",
+  getBadge: () => `BEST ${stackBest}층`,
+  getScore: () => stackFloors,
+  reset: resetStack,
+  draw: drawStackFrame,
+  stop: () => {
+    stackRunning = false;
+  },
+  onPointerDown: () => {
+    handleStackAction();
+  },
+  onKeyDown: (e) => {
+    if (e.code === "Space" || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+      e.preventDefault();
+      if (!e.repeat) handleStackAction();
+    }
+  }
+});
