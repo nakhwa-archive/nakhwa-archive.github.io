@@ -322,3 +322,76 @@ function drawGogunFrame() {
     }
   }
 }
+
+registerGame({
+  id: "gogun",
+  title: "낙화 고군분투",
+  icon: "🪝",
+  desc: "길드원·보물 낚시 & 고블린 훔치기! 고군분투 타임어택",
+  aspect: "tall",
+  unit: "점",
+  hint: "길게 눌러 궤적 조준 후 놓으면 발사! (PC: 스페이스바 홀드)",
+  rankingTitle: "🪝 낙화 고군분투 TOP 5",
+  dbNode: "gogun_scores",
+  getBadge: () => `BEST ${gogunBest}점`,
+  getScore: () => gogunScore,
+  reset: resetGogun,
+  draw: drawGogunFrame,
+  stop: () => {
+    gogunRunning = false;
+    gogunHolding = false;
+    gogunHoldFrames = 0;
+    gogunHook.active = false;
+  },
+  onPointerDown: (x, y) => {
+    if (gogunOver || !gogunRunning) {
+      if (!canRestartNow()) return;
+      resetGogun();
+      return;
+    }
+    if (!gogunHook.active) {
+      gogunHolding = true;
+      gogunHoldFrames = 0;
+      gogunAimX = x;
+      gogunAimY = y;
+      updateGogunAimFromPoint(x, y);
+    }
+  },
+  onPointerMove: (x, y) => {
+    if (gogunRunning && !gogunOver && gogunHolding && !gogunHook.active) {
+      gogunAimX = x;
+      gogunAimY = y;
+      updateGogunAimFromPoint(x, y);
+    }
+  },
+  onPointerUp: () => {
+    if (gogunHolding && !gogunHook.active && gogunRunning && !gogunOver) {
+      fireGogunHook();
+    }
+    gogunHolding = false;
+    gogunHoldFrames = 0;
+  },
+  onKeyDown: (e) => {
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (gogunOver || !gogunRunning) {
+        if (!e.repeat && canRestartNow()) resetGogun();
+        return;
+      }
+      if (!gogunHook.active) {
+        gogunHolding = true;
+        if (!e.repeat) gogunHoldFrames = 0;
+      }
+    }
+  },
+  onKeyUp: (e) => {
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (gogunHolding && !gogunHook.active && gogunRunning && !gogunOver) {
+        fireGogunHook();
+      }
+      gogunHolding = false;
+      gogunHoldFrames = 0;
+    }
+  }
+});
