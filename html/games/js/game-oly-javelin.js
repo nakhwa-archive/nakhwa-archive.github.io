@@ -2,33 +2,32 @@
 var olyJavRunning = false;
 var olyJavOver = false;
 var olyJavFinished = false;
-var olyJavFoul = false;
 
-var olyJavPhase = "run"; // "run" | "aim" | "air" | "done"
-var olyJavDist = 0; // 도움닫기 거리 (0 ~ 25m 투척선)
+var olyJavPhase = "run"; // "run" | "flight" | "done"
+var olyJavDist = 0; // 도움닫기 거리 (0 ~ 20m)
 var olyJavSpeed = 0;
 var olyJavLastSide = 0;
 var olyJavLastStepFrame = 0;
 var olyJavFrame = 0;
 
-var olyJavAngleDeg = 40; // 15 ~ 65도 사이 왕복
+var olyJavAngleDeg = 40; // 투척 각도 (20 ~ 65도)
 var olyJavAngleDir = 1;
 
-var olyJavSpearX = 85;
-var olyJavSpearY = 264;
-var olyJavSpearVx = 0;
-var olyJavSpearVy = 0;
-var olyJavSpearAngleRad = (-40 * Math.PI) / 180;
+var olyJavX = 75;
+var olyJavY = 264;
+var olyJavVx = 0;
+var olyJavVy = 0;
+var olyJavFlightGainPx = 0;
 var olyJavThrowDistM = 0;
 
-var olyJavScoreCm = 0; // 예: 7420 => 74.20m
+var olyJavScoreCm = 0; // 예: 8640 => 86.40m
 var olyJavLastScore = 0;
 var olyJavBestCm = Number(localStorage.getItem("nakhwaOlyJavelinBestCm") || 0);
 var olyJavParticles = [];
 var olyJavPopups = [];
 
-var OLY_JAV_THROW_LINE = 25.0;
-var OLY_JAV_GROUND_Y = 294;
+var OLY_JAV_FOUL_DIST = 17.5;
+var OLY_JAV_LAND_Y = 304;
 
 function resetOlyJavelin() {
   olyJavPhase = "run";
@@ -39,17 +38,16 @@ function resetOlyJavelin() {
   olyJavFrame = 0;
   olyJavAngleDeg = 40;
   olyJavAngleDir = 1;
-  olyJavSpearX = 85;
-  olyJavSpearY = 264;
-  olyJavSpearVx = 0;
-  olyJavSpearVy = 0;
-  olyJavSpearAngleRad = (-40 * Math.PI) / 180;
+  olyJavX = 75;
+  olyJavY = 264;
+  olyJavVx = 0;
+  olyJavVy = 0;
+  olyJavFlightGainPx = 0;
   olyJavThrowDistM = 0;
   olyJavScoreCm = 0;
   olyJavLastScore = 0;
   olyJavParticles = [];
   olyJavPopups = [];
-  olyJavFoul = false;
   olyJavOver = false;
   olyJavFinished = false;
   olyJavRunning = true;
@@ -84,66 +82,34 @@ function stepOlyJavelinStride(side) {
   const isAlternating = olyJavLastSide !== side;
 
   if (isAlternating) {
-    const bonus = diffFrames >= 5 && diffFrames <= 17 ? 0.28 : 0.18;
+    const bonus = diffFrames >= 5 && diffFrames <= 17 ? 0.27 : 0.18;
     olyJavSpeed = Math.min(1.85, olyJavSpeed + bonus);
-    spawnOlyJavBurst(85, 294, "#ff8ca5", 4);
+    spawnOlyJavBurst(olyJavX, 294, "#ff8ca5", 4);
   } else {
     olyJavSpeed = Math.max(0.12, olyJavSpeed - 0.12);
-    addOlyJavPopup(canvas.width * 0.5, 196, "좌/우 교대!", "#9898a6");
+    addOlyJavPopup(canvas.width * 0.5, 190, "좌/우 교대!", "#9898a6");
   }
 
   olyJavLastSide = side;
   olyJavLastStepFrame = olyJavFrame;
 }
 
-function enterOlyJavelinAim() {
-  if (olyJavPhase !== "run") return;
-  if (olyJavDist > OLY_JAV_THROW_LINE) {
-    olyJavFoul = true;
-    olyJavPhase = "done";
-    olyJavFinished = true;
-    olyJavRunning = false;
-    olyJavScoreCm = 0;
-    olyJavLastScore = 0;
-    triggerGameOver(false, false);
-    return;
-  }
-  olyJavPhase = "aim";
-  olyJavAngleDeg = 35;
-  olyJavAngleDir = 1;
-  addOlyJavPopup(120, 210, "📐 각도 멈춰서 투척!", "#ffd166");
-}
-
-function releaseOlyJavelin() {
-  if (!olyJavRunning || olyJavOver || olyJavFinished) return;
-
-  if (olyJavPhase === "run") {
-    enterOlyJavelinAim();
-    return;
-  }
-
-  if (olyJavPhase !== "aim") return;
-
-  // 42도 기준 최적 각도 보너스 (0.65 ~ 1.0)
-  const angleDiff = Math.abs(olyJavAngleDeg - 42);
-  const angleFactor = Math.max(0.55, 1 - angleDiff / 55);
-  const runFactor = Math.max(0.4, Math.min(1.2, olyJavSpeed * 0.85));
-  const power = runFactor * angleFactor;
+function throwOlyJavelin() {
+  if (!olyJavRunning || olyJavOver || olyJavFinished || olyJavPhase !== "run") return;
 
   const rad = (olyJavAngleDeg * Math.PI) / 180;
-  const launchSpeed = 6.2 + power * 7.4;
+  const angleEfficiency = Math.max(0.55, 1 - Math.abs(olyJavAngleDeg - 42) / 36);
+  const speedPower = Math.max(0.35, Math.min(1.3, olyJavSpeed * 0.92));
 
-  olyJavSpearX = 115;
-  olyJavSpearY = 262;
-  olyJavSpearVx = Math.cos(rad) * launchSpeed;
-  olyJavSpearVy = -Math.sin(rad) * launchSpeed;
-  olyJavSpearAngleRad = -rad;
+  olyJavPhase = "flight";
+  olyJavVx = Math.cos(rad) * (4.8 + speedPower * 4.4);
+  olyJavVy = -Math.sin(rad) * (4.6 + speedPower * 4.2);
+  olyJavFlightGainPx = 0;
 
-  olyJavPhase = "air";
-  spawnOlyJavBurst(115, 262, "#ffd166", 10);
+  spawnOlyJavBurst(olyJavX + 12, olyJavY - 8, "#ffd166", 10);
 
-  if (angleDiff <= 4) {
-    addOlyJavPopup(120, 224, "🎯 GOLDEN ANGLE!", "#ffd166");
+  if (angleEfficiency >= 0.92 && olyJavSpeed >= 0.9) {
+    addOlyJavPopup(olyJavX + 20, olyJavY - 34, "🎯 GOLDEN RELEASE!", "#ffd166");
   }
 }
 
@@ -152,15 +118,14 @@ function landOlyJavelin() {
   olyJavFinished = true;
   olyJavRunning = false;
 
-  // 투척 거리 계산 (22.00m ~ 92.50m 범위)
-  const travelPx = Math.max(0, olyJavSpearX - 115);
-  const rawMeters = Math.max(18.0, Math.min(94.0, 22.0 + travelPx * 0.34));
+  // 창던지기 기록 산출 (38.00m ~ 96.50m 범위)
+  const rawMeters = Math.max(32.00, Math.min(98.50, 38.00 + olyJavFlightGainPx * 0.088));
   const finalMeters = Number(rawMeters.toFixed(2));
   olyJavThrowDistM = finalMeters;
   olyJavScoreCm = Math.round(finalMeters * 100);
   olyJavLastScore = olyJavScoreCm;
 
-  spawnOlyJavBurst(olyJavSpearX, OLY_JAV_GROUND_Y, "#72efdd", 14);
+  spawnOlyJavBurst(olyJavX, olyJavY, "#72efdd", 14);
 
   const isNewBest = olyJavScoreCm > olyJavBestCm;
   if (isNewBest) {
@@ -183,28 +148,37 @@ function drawOlyJavelinFrame() {
         olyJavSpeed = Math.max(minRunSpeed, olyJavSpeed * 0.968);
         olyJavDist += olyJavSpeed * 0.25;
 
-        // 25m 투척선에 가까워지면 자동으로 각도 조준 단계 진입
-        if (olyJavDist >= OLY_JAV_THROW_LINE - 0.5) {
-          olyJavDist = OLY_JAV_THROW_LINE - 0.5;
-          enterOlyJavelinAim();
-        }
-      } else if (olyJavPhase === "aim") {
-        olyJavAngleDeg += olyJavAngleDir * 1.45;
-        if (olyJavAngleDeg >= 65) {
-          olyJavAngleDeg = 65;
+        const targetX = 75 + (olyJavDist / OLY_JAV_FOUL_DIST) * 70;
+        olyJavX = Math.min(145, targetX);
+        olyJavY = 264;
+
+        // 각도 조준 왕복 (22도 ~ 62도)
+        olyJavAngleDeg += olyJavAngleDir * 0.95;
+        if (olyJavAngleDeg >= 62) {
+          olyJavAngleDeg = 62;
           olyJavAngleDir = -1;
-        } else if (olyJavAngleDeg <= 15) {
-          olyJavAngleDeg = 15;
+        } else if (olyJavAngleDeg <= 22) {
+          olyJavAngleDeg = 22;
           olyJavAngleDir = 1;
         }
-      } else if (olyJavPhase === "air") {
-        olyJavSpearX = Math.min(canvas.width - 14, olyJavSpearX + olyJavSpearVx);
-        olyJavSpearY += olyJavSpearVy;
-        olyJavSpearVy += 0.24;
-        olyJavSpearAngleRad = Math.atan2(olyJavSpearVy, olyJavSpearVx);
 
-        if (olyJavSpearY >= OLY_JAV_GROUND_Y || olyJavSpearX >= canvas.width - 16) {
-          olyJavSpearY = OLY_JAV_GROUND_Y;
+        if (olyJavDist >= 19.8) {
+          throwOlyJavelin();
+        }
+      } else if (olyJavPhase === "flight") {
+        // 화면 끝에서 끝나지 않고 뒤쪽 필드가 스크롤되며 창이 계속 날아가게 처리
+        const forwardStep = olyJavVx;
+        olyJavFlightGainPx += forwardStep;
+
+        if (olyJavX < canvas.width - 56) {
+          olyJavX += forwardStep * 0.55;
+        }
+
+        olyJavY += olyJavVy;
+        olyJavVy += 0.15;
+
+        if (olyJavY >= OLY_JAV_LAND_Y) {
+          olyJavY = OLY_JAV_LAND_Y;
           landOlyJavelin();
         }
       }
@@ -217,31 +191,36 @@ function drawOlyJavelinFrame() {
     ctx.fillStyle = "#191b26";
     ctx.fillRect(0, 0, canvas.width, 130);
 
-    // 잔디 투척 구역
-    ctx.fillStyle = "#24523a";
+    ctx.fillStyle = "#2d5a3c";
     ctx.fillRect(0, 130, canvas.width, 210);
 
-    // 투척 아크 라인
-    ctx.strokeStyle = "#ffd166";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(115, 130);
-    ctx.lineTo(115, 340);
-    ctx.stroke();
+    // 파울 라인(도움닫기 구간에서 상대 이동)
+    const foulX = olyJavPhase === "run"
+      ? olyJavX + (OLY_JAV_FOUL_DIST - olyJavDist) * 10
+      : -120;
+    if (foulX >= -10 && foulX <= canvas.width + 10) {
+      ctx.fillStyle = "#ffd166";
+      ctx.fillRect(foulX, 130, 4, 210);
+    }
 
-    // 거리 마커 (투척선 이후)
-    ctx.fillStyle = "rgba(244, 244, 246, 0.55)";
+    // 거리 눈금 (창 비행 중에도 계속 스크롤되며 멀어짐)
+    const meterScrollOffset = olyJavPhase === "flight" || olyJavPhase === "done"
+      ? (olyJavFlightGainPx * 0.85) % 240
+      : 0;
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
     ctx.font = "bold 10px sans-serif";
     ctx.textAlign = "center";
-    for (let m = 30; m <= 90; m += 10) {
-      const mx = 115 + (m - 22) / 0.34;
-      if (mx > 125 && mx < canvas.width - 10) {
-        ctx.fillRect(mx, 294, 2, 10);
-        ctx.fillText(`${m}m`, mx, 316);
+    for (let baseIdx = -1; baseIdx <= 2; baseIdx++) {
+      const baseDist = 30 + baseIdx * 60;
+      const mx = 155 + (baseIdx + 1) * 40 - meterScrollOffset;
+      if (mx >= 12 && mx <= canvas.width - 12 && baseDist >= 10) {
+        ctx.fillRect(mx, 296, 2, 8);
+        ctx.fillText(`${baseDist}m`, mx, 316);
       }
     }
 
-    // 하단 조작 가이드 존
+    // 하단 가이드 존 (겹침 없이 깔끔하게 배치)
     ctx.fillStyle = "#161822";
     ctx.fillRect(0, 340, canvas.width, canvas.height - 340);
     ctx.strokeStyle = "#2b2e3d";
@@ -253,87 +232,51 @@ function drawOlyJavelinFrame() {
     ctx.fillStyle = "#9898a6";
     ctx.font = "bold 11px sans-serif";
     ctx.textAlign = "center";
-    if (olyJavPhase === "aim") {
+    ctx.fillText("◀ 좌 가속 (←/A)", canvas.width * 0.25, 376);
+    ctx.fillText("우 가속 (→/D) ▶", canvas.width * 0.75, 376);
+
+    // 선수 캐릭터 렌더링 (도움닫기 & 투척 자세)
+    if (olyJavPhase === "run") {
+      const bob = Math.sin(olyJavFrame * 0.45) * (olyJavSpeed > 0.2 ? 3 : 0);
+      ctx.fillStyle = "#e65c7b";
+      ctx.beginPath();
+      ctx.arc(olyJavX, olyJavY + bob, 9, 0, Math.PI * 2);
+      ctx.fill();
+
       ctx.fillStyle = "#ffd166";
-      ctx.fillText("🎯 아무 곳이나 터치(PC: Space/↑)해서 창 투척!", canvas.width * 0.5, 376);
-    } else {
-      ctx.fillText("◀ 좌 가속 (←/A) · 위 투척조준(↑/Space)", canvas.width * 0.25, 376);
-      ctx.fillText("우 가속 (→/D) · 위 투척조준(↑/Space) ▶", canvas.width * 0.75, 376);
+      ctx.beginPath();
+      ctx.arc(olyJavX + 3, olyJavY - 14 + bob, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      const aimRad = (-olyJavAngleDeg * Math.PI) / 180;
+      ctx.strokeStyle = "#72efdd";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(olyJavX + 6, olyJavY - 4 + bob);
+      ctx.lineTo(olyJavX + 6 + Math.cos(aimRad) * 42, olyJavY - 4 + bob + Math.sin(aimRad) * 42);
+      ctx.stroke();
     }
 
-    // 선수 & 창 렌더링
-    const throwerX = 85;
-    const throwerY = 264 + (olyJavPhase === "run" ? Math.sin(olyJavFrame * 0.45) * (olyJavSpeed > 0.2 ? 3 : 0) : 0);
+    // 창 렌더링 (비행 각도에 맞춰 기울어지며 계속 날아감)
+    const flightAngle = olyJavPhase === "flight" || olyJavPhase === "done"
+      ? Math.atan2(olyJavVy, olyJavVx)
+      : (-olyJavAngleDeg * Math.PI) / 180;
 
-    // 선수
-    ctx.fillStyle = "#e65c7b";
+    ctx.save();
+    ctx.translate(olyJavX + 10, olyJavY - 4);
+    ctx.rotate(flightAngle);
+    ctx.strokeStyle = "#f4f4f6";
+    ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(throwerX, throwerY + 4, 9, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(-22, 0);
+    ctx.lineTo(22, 0);
+    ctx.stroke();
 
     ctx.fillStyle = "#ffd166";
     ctx.beginPath();
-    ctx.arc(throwerX + 2, throwerY - 10, 8, 0, Math.PI * 2);
+    ctx.arc(22, 0, 3.2, 0, Math.PI * 2);
     ctx.fill();
-
-    if (olyJavPhase === "run" || olyJavPhase === "aim") {
-      const aimRad = (-olyJavAngleDeg * Math.PI) / 180;
-      ctx.save();
-      ctx.translate(throwerX + 8, throwerY - 2);
-      ctx.rotate(aimRad);
-
-      // 창 몸체
-      ctx.strokeStyle = "#f4f4f6";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-22, 0);
-      ctx.lineTo(28, 0);
-      ctx.stroke();
-
-      // 창 끝 촉
-      ctx.fillStyle = "#72efdd";
-      ctx.beginPath();
-      ctx.moveTo(34, 0);
-      ctx.lineTo(25, -4);
-      ctx.lineTo(25, 4);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-
-      // 조준각 가이드 라인
-      if (olyJavPhase === "aim") {
-        ctx.save();
-        ctx.setLineDash([4, 4]);
-        ctx.strokeStyle = "rgba(255, 209, 102, 0.75)";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.moveTo(throwerX + 8, throwerY - 2);
-        ctx.lineTo(
-          throwerX + 8 + Math.cos(aimRad) * 95,
-          throwerY - 2 + Math.sin(aimRad) * 95
-        );
-        ctx.stroke();
-        ctx.restore();
-      }
-    } else if (olyJavPhase === "air" || olyJavPhase === "done") {
-      ctx.save();
-      ctx.translate(olyJavSpearX, olyJavSpearY);
-      ctx.rotate(olyJavSpearAngleRad);
-      ctx.strokeStyle = "#f4f4f6";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(-24, 0);
-      ctx.lineTo(24, 0);
-      ctx.stroke();
-      ctx.fillStyle = "#ffd166";
-      ctx.beginPath();
-      ctx.moveTo(30, 0);
-      ctx.lineTo(21, -4);
-      ctx.lineTo(21, 4);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-    }
+    ctx.restore();
 
     // 파티클 & 팝업
     for (let i = olyJavParticles.length - 1; i >= 0; i--) {
@@ -366,10 +309,20 @@ function drawOlyJavelinFrame() {
     ctx.fillStyle = "rgba(15, 15, 18, 0.82)";
     ctx.fillRect(0, 0, canvas.width, 46);
 
+    const liveMeters = olyJavPhase === "flight" || olyJavPhase === "done"
+      ? (38.00 + olyJavFlightGainPx * 0.088).toFixed(2)
+      : "--.--";
+
     ctx.fillStyle = "#f4f4f6";
     ctx.font = "bold 14px sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText(`도움닫기 ${olyJavDist.toFixed(1)}m · 각도 ${Math.round(olyJavAngleDeg)}°`, 12, 21);
+    ctx.fillText(
+      olyJavPhase === "run"
+        ? `도움닫기 ${olyJavDist.toFixed(1)}m · 각도 ${Math.round(olyJavAngleDeg)}°`
+        : `비행 거리 ${liveMeters}m`,
+      12,
+      21
+    );
 
     ctx.fillStyle = "#72efdd";
     ctx.font = "bold 12px sans-serif";
@@ -387,27 +340,18 @@ function drawOlyJavelinFrame() {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.textAlign = "center";
-      if (olyJavFoul) {
-        ctx.fillStyle = "#ff4d6d";
-        ctx.font = "bold 20px sans-serif";
-        ctx.fillText("❌ 투척선 파울! (FOUL)", canvas.width / 2, 182);
-        ctx.fillStyle = "#f4f4f6";
-        ctx.font = "600 13px sans-serif";
-        ctx.fillText("25m 투척선 도달 전에 던져보세요 · 터치로 재시도", canvas.width / 2, 214);
-      } else {
-        ctx.fillStyle = "#f4f4f6";
-        ctx.font = "bold 20px sans-serif";
-        ctx.fillText(`🎯 투척 기록 ${olyJavThrowDistM.toFixed(2)}m`, canvas.width / 2, 182);
+      ctx.fillStyle = "#f4f4f6";
+      ctx.font = "bold 20px sans-serif";
+      ctx.fillText(`🏹 창던지기 ${olyJavThrowDistM.toFixed(2)}m`, canvas.width / 2, 182);
 
-        if (isNewBestPending) {
-          ctx.fillStyle = "#ffd166";
-          ctx.font = "bold 13px sans-serif";
-          ctx.fillText("🎉 신기록! 아래에서 기록을 등록해 주세요", canvas.width / 2, 214);
-        } else {
-          ctx.fillStyle = "#ff8ca5";
-          ctx.font = "600 13px sans-serif";
-          ctx.fillText("터치 또는 스페이스바로 다시 도전", canvas.width / 2, 214);
-        }
+      if (isNewBestPending) {
+        ctx.fillStyle = "#ffd166";
+        ctx.font = "bold 13px sans-serif";
+        ctx.fillText("🎉 신기록! 아래에서 기록을 등록해 주세요", canvas.width / 2, 214);
+      } else {
+        ctx.fillStyle = "#ff8ca5";
+        ctx.font = "600 13px sans-serif";
+        ctx.fillText("터치 또는 스페이스바로 다시 도전", canvas.width / 2, 214);
       }
     }
 
@@ -429,13 +373,13 @@ function drawOlyJavelinFrame() {
 registerGame({
   id: "oly-javelin",
   title: "창던지기",
-  icon: "🎯",
-  desc: "가속 후 42° 최적 각도를 맞춰 창을 멀리 날려라!",
+  icon: "🏹",
+  desc: "도움닫기 스피드와 투척 각도 타이밍으로 창을 가장 멀리 날려라!",
   aspect: "tall",
   sortOrder: "desc",
   unit: "m",
-  hint: "좌/우 번갈아 달리기 · 위쪽 터치(PC: ↑/Space)로 각도 조준 후 발사!",
-  rankingTitle: "🎯 창던지기 TOP 5 (최장 거리)",
+  hint: "좌/우 번갈아 가속 · 위쪽 터치(PC: ↑/W/Space)로 투척! (최적 각도 ~42°)",
+  rankingTitle: "🏹 창던지기 TOP 5 (최장 거리)",
   dbNode: "oly_javelin_scores",
   formatScore: (score) => `${(score / 100).toFixed(2)}m`,
   getBadge: () => (olyJavBestCm > 0 ? `BEST ${(olyJavBestCm / 100).toFixed(2)}m` : "BEST --.--m"),
@@ -451,12 +395,8 @@ registerGame({
       resetOlyJavelin();
       return;
     }
-    if (olyJavPhase === "aim") {
-      releaseOlyJavelin();
-      return;
-    }
     if (y < 235) {
-      enterOlyJavelinAim();
+      throwOlyJavelin();
     } else {
       stepOlyJavelinStride(x < canvas.width / 2 ? -1 : 1);
     }
@@ -471,14 +411,11 @@ registerGame({
     }
     if (e.code === "Space" || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
       e.preventDefault();
-      if (!e.repeat) {
-        if (olyJavPhase === "run") enterOlyJavelinAim();
-        else if (olyJavPhase === "aim") releaseOlyJavelin();
-      }
-    } else if (olyJavPhase === "run" && (e.key === "ArrowLeft" || e.key === "a" || e.key === "A")) {
+      if (!e.repeat) throwOlyJavelin();
+    } else if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
       e.preventDefault();
       if (!e.repeat) stepOlyJavelinStride(-1);
-    } else if (olyJavPhase === "run" && (e.key === "ArrowRight" || e.key === "d" || e.key === "D")) {
+    } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
       e.preventDefault();
       if (!e.repeat) stepOlyJavelinStride(1);
     }
