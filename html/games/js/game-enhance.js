@@ -345,3 +345,45 @@ function drawEnhanceFrame() {
 
   ctx.restore();
 }
+
+registerGame({
+  id: "enhance",
+  title: "낙화 무기 강화",
+  icon: "🔨",
+  desc: "파괴 확률을 뚫고 전설의 낙화신검을 제련하라!",
+  aspect: "tall",
+  unit: "점",
+  hint: "강화하기(스페이스)로 단계 상승 · 파괴 전 판매 확정(S)으로 점수 획득!",
+  rankingTitle: "🔨 낙화 무기 강화 TOP 5",
+  dbNode: "enhance_scores",
+  getBadge: () => `BEST ${enhanceBest}점`,
+  getScore: () => enhanceScore,
+  reset: resetEnhance,
+  draw: drawEnhanceFrame,
+  stop: () => {
+    enhanceRunning = false;
+  },
+  onPointerDown: (x, y) => {
+    if (enhanceOver || !enhanceRunning) {
+      if (!canRestartNow()) return;
+      resetEnhance();
+      return;
+    }
+    if (y >= 340 && x >= 208) {
+      sellEnhanceWeapon();
+    } else {
+      doEnhanceAttempt();
+    }
+  },
+  onKeyDown: (e) => {
+    if (e.key === "s" || e.key === "S") {
+      e.preventDefault();
+      if (!e.repeat) sellEnhanceWeapon();
+      return;
+    }
+    if (e.code === "Space" || e.key === "Enter") {
+      e.preventDefault();
+      if (!e.repeat) doEnhanceAttempt();
+    }
+  }
+});
