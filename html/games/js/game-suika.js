@@ -348,3 +348,65 @@ function drawSuikaFrame() {
     }
   }
 }
+
+registerGame({
+  id: "suika",
+  title: "낙화 수박게임",
+  icon: "🍉",
+  desc: "같은 과일·꽃을 합쳐 거대한 수박과 만개 벚꽃 만들기",
+  aspect: "tall",
+  unit: "점",
+  hint: "드래그로 위치 조준 후 손을 떼면 드롭! (PC: 방향키+스페이스)",
+  rankingTitle: "🍉 낙화 수박게임 TOP 5",
+  dbNode: "suika_scores",
+  getBadge: () => `BEST ${suikaBest}점`,
+  getScore: () => suikaScore,
+  reset: resetSuika,
+  draw: drawSuikaFrame,
+  stop: () => {
+    suikaRunning = false;
+    suikaAiming = false;
+  },
+  onPointerDown: (x) => {
+    if (suikaOver || !suikaRunning) {
+      if (!canRestartNow()) return;
+      resetSuika();
+      return;
+    }
+    suikaAiming = true;
+    suikaDropX = clampSuikaX(x, suikaCurTier);
+  },
+  onPointerMove: (x, y, e) => {
+    if (suikaRunning && !suikaOver && (suikaAiming || e.pointerType === "mouse")) {
+      suikaDropX = clampSuikaX(x, suikaCurTier);
+    }
+  },
+  onPointerUp: () => {
+    if (suikaAiming) {
+      suikaAiming = false;
+      dropSuikaBall();
+    }
+  },
+  onKeyDown: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); dodgeKeys.right = true; }
+    }
+    if (e.code === "Space" || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+      e.preventDefault();
+      if (!e.repeat) {
+        if (suikaOver || !suikaRunning) {
+          if (canRestartNow()) resetSuika();
+        } else {
+          dropSuikaBall();
+        }
+      }
+    }
+  },
+  onKeyUp: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") dodgeKeys.left = false;
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") dodgeKeys.right = false;
+    }
+  }
+});
