@@ -171,16 +171,18 @@ function drawOlyLongJumpFrame() {
     ctx.fillStyle = "#191b26";
     ctx.fillRect(0, 0, canvas.width, 130);
 
-    // 도움닫기 진행에 따라 점프 라인이 뒤쪽(왼쪽)으로 흘러가며 멀어지도록 배치
+    // 도움닫기할수록 노란색(발구름선 & 모래 구간)이 앞쪽에서 다가오도록 계산
     const foulLineScreenX =
       olyLjX +
       (OLY_LJ_FOUL_DIST - olyLjDist) * OLY_LJ_PX_PER_METER -
       (olyLjPhase === "jump" ? olyLjAirGainPx * 0.65 : 0);
     const sandStartX = Math.max(0, Math.min(canvas.width, foulLineScreenX + 12));
 
+    // 트랙 구간
     ctx.fillStyle = "#9e3b33";
     ctx.fillRect(0, 130, sandStartX, 210);
 
+    // 노란색 발구름/모래 구간
     ctx.fillStyle = "#d9b372";
     ctx.fillRect(sandStartX, 130, canvas.width - sandStartX, 210);
 
@@ -194,7 +196,7 @@ function drawOlyLongJumpFrame() {
       ctx.fillRect(x + 12, 324, 18, 2);
     }
 
-    // 점프(발구름) 라인 — 뒤로 멀어지며 스크롤
+    // 점프(발구름) 라인
     if (foulLineScreenX >= -10 && foulLineScreenX <= canvas.width + 10) {
       ctx.fillStyle = "#ffd166";
       ctx.fillRect(foulLineScreenX - 2, 132, 4, 206);
