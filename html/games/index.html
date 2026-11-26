@@ -108,7 +108,7 @@
     }
 
     .lobby-intro {
-      margin-bottom: 14px;
+      margin-bottom: 12px;
       padding: 14px 16px;
       background: linear-gradient(135deg, rgba(230, 92, 123, 0.14), rgba(26, 26, 31, 0.9));
       border: 1px solid rgba(230, 92, 123, 0.3);
@@ -125,6 +125,35 @@
     .lobby-intro p {
       font-size: 0.82rem;
       color: var(--text-sub);
+    }
+
+    .category-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .category-tab {
+      flex: 1;
+      height: 36px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-sub);
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.14s ease;
+    }
+
+    .category-tab.active {
+      background: rgba(230, 92, 123, 0.18);
+      border-color: var(--accent);
+      color: #ff9eb5;
+    }
+
+    .category-tab:active {
+      transform: scale(0.97);
     }
 
     .game-grid {
@@ -550,6 +579,11 @@
         <h2 id="lobbyCountTitle">🎮 미니게임 선택</h2>
         <p>원하는 게임을 선택해 길드원들과 랭킹을 겨뤄보세요!</p>
       </div>
+      <div class="category-tabs" id="categoryTabs" role="tablist" aria-label="게임 카테고리">
+        <button type="button" class="category-tab active" data-category="all">전체</button>
+        <button type="button" class="category-tab" data-category="arcade">일반게임</button>
+        <button type="button" class="category-tab" data-category="olympic">올림픽 게임</button>
+      </div>
       <div class="game-grid" id="gameGrid"></div>
     </section>
 
@@ -601,6 +635,7 @@
 
     const lobbyView = document.getElementById("lobbyView");
     const lobbyCountTitle = document.getElementById("lobbyCountTitle");
+    const categoryTabs = document.getElementById("categoryTabs");
     const gameGrid = document.getElementById("gameGrid");
     const playView = document.getElementById("playView");
     const arcadeCard = document.getElementById("arcadeCard");
@@ -626,6 +661,7 @@
     let isInPlayScreen = false;
     let isGameFullscreen = false;
     let activeGame = "barricade";
+    let activeCategory = "all"; // "all" | "arcade" | "olympic"
     const GROUND_Y = 170;
     let petals = [];
 
@@ -636,9 +672,24 @@
     window.NAKHWA_GAMES = [];
     const GAME_MAP = {};
 
+    function detectCategoryFromScriptSrc(src) {
+      const fileName = String(src || "").split("/").pop().split("?")[0];
+      if (fileName.startsWith("game-oly-") || fileName.startsWith("game-win-")) {
+        return "olympic";
+      }
+      return "arcade";
+    }
+
     function registerGame(def) {
       if (!def || !def.id) return;
+      const currentSrc =
+        (document.currentScript && document.currentScript.src) ||
+        (document.currentScript && document.currentScript.getAttribute("src")) ||
+        "";
+      const detectedCategory = def.category || detectCategoryFromScriptSrc(currentSrc);
+
       const entry = Object.assign({
+        category: detectedCategory,
         aspect: "tall",
         sortOrder: "desc",
         unit: "점",
@@ -723,7 +774,7 @@
     }
   </script>
 
-  <!-- 게임 스크립트들: 새 게임은 파일 1개 만들고 아래에 1줄만 추가 -->
+  <!-- 게임 스크립트들: 파일명(game-oly- / game-win- vs 일반 game-*)으로 카테고리 자동 판별 -->
   <script src="./js/game-barricade.js"></script>
   <script src="./js/game-bubble.js"></script>
   <script src="./js/game-archery.js"></script>
@@ -768,11 +819,28 @@
     };
     let currentAspect = GAME_ASPECT.tall;
 
-    function buildLobbyCards() {
-      gameGrid.innerHTML = "";
-      lobbyCountTitle.textContent = `🎮 미니게임 선택 (총 ${window.NAKHWA_GAMES.length}종)`;
+    function getFilteredGames() {
+      if (activeCategory === "all") return window.NAKHWA_GAMES;
+      return window.NAKHWA_GAMES.filter(g => g.category === activeCategory);
+    }
 
-      window.NAKHWA_GAMES.forEach(g => {
+    function updateLobbyTitleCount(filteredCount) {
+      const totalCount = window.NAKHWA_GAMES.length;
+      if (activeCategory === "arcade") {
+        lobbyCountTitle.textContent = `🎮 일반게임 (${filteredCount}종 / 전체 ${totalCount}종)`;
+      } else if (activeCategory === "olympic") {
+        lobbyCountTitle.textContent = `🏅 올림픽 게임 (${filteredCount}종 / 전체 ${totalCount}종)`;
+      } else {
+        lobbyCountTitle.textContent = `🎮 미니게임 선택 (총 ${totalCount}종)`;
+      }
+    }
+
+    function buildLobbyCards() {
+      const list = getFilteredGames();
+      gameGrid.innerHTML = "";
+      updateLobbyTitleCount(list.length);
+
+      list.forEach(g => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "game-card";
@@ -795,6 +863,20 @@
         gameGrid.appendChild(btn);
       });
     }
+
+    categoryTabs.addEventListener("click", (e) => {
+      const tab = e.target.closest(".category-tab");
+      if (!tab) return;
+      const nextCat = tab.getAttribute("data-category");
+      if (!nextCat || nextCat === activeCategory) return;
+
+      activeCategory = nextCat;
+      categoryTabs.querySelectorAll(".category-tab").forEach(btn => {
+        btn.classList.toggle("active", btn === tab);
+      });
+      buildLobbyCards();
+      updateLobbyBadges();
+    });
 
     function updateLobbyBadges() {
       window.NAKHWA_GAMES.forEach(g => {
