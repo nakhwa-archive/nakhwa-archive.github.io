@@ -1,4 +1,4 @@
-/* ---------- 올림픽 6. 투포환 (Shot Put) ---------- */
+/* ---------- 올림픽 6. 투포환 (Shot Put - Camera Follow) ---------- */
 var olySpRunning = false;
 var olySpOver = false;
 var olySpFinished = false;
@@ -19,12 +19,15 @@ var olySpFrame = 0;
 
 var olySpX = 95;
 var olySpY = 294;
-var olySpBallX = 104;
+
+// 공의 월드 좌표 (도약 기준선 기준 누적 픽셀)
+var olySpBallWorldX = 104;
 var olySpBallY = 270;
 var olySpBallVx = 0;
 var olySpBallVy = 0;
 var olySpFlightPx = 0;
-var olySpTrail = [];
+var olySpCamScrollPx = 0;
+var olySpTrail = []; // { worldX, y }
 
 var olySpThrowDistM = 0;
 var olySpScoreCm = 0;
@@ -72,11 +75,12 @@ function resetOlyShotput() {
 
   olySpX = OLY_SP_START_X;
   olySpY = OLY_SP_GROUND_Y;
-  olySpBallX = olySpX + 9;
+  olySpBallWorldX = olySpX + 9;
   olySpBallY = olySpY - 24;
   olySpBallVx = 0;
   olySpBallVy = 0;
   olySpFlightPx = 0;
+  olySpCamScrollPx = 0;
   olySpTrail = [];
 
   olySpThrowDistM = 0;
@@ -154,15 +158,16 @@ function releaseOlyShotput(forceFoul = false) {
   olySpFoul = forceFoul || olySpCirclePos > OLY_SP_FOUL_POS;
 
   const rad = (olySpThrowAngle * Math.PI) / 180;
-  const speedMag = 3.2 + (olySpThrowPower / 100) * 5.8;
+  const speedMag = 3.4 + (olySpThrowPower / 100) * 5.8;
 
   olySpPhase = "flight";
-  olySpBallX = olySpX + 10;
+  olySpBallWorldX = olySpX + 10;
   olySpBallY = olySpY - 26;
   olySpBallVx = Math.cos(rad) * speedMag;
   olySpBallVy = -Math.sin(rad) * speedMag;
   olySpFlightPx = 0;
-  olySpTrail = [];
+  olySpCamScrollPx = 0;
+  olySpTrail = [{ worldX: olySpBallWorldX, y: olySpBallY }];
 
   if (olySpFoul) {
     addOlySpPopup(olySpX, olySpY - 38, "🚫 FOUL!", "#ff4d6d");
@@ -174,7 +179,7 @@ function releaseOlyShotput(forceFoul = false) {
     } else if (angleDiff <= 5) {
       addOlySpPopup(olySpX, olySpY - 38, "✨ NICE ANGLE!", "#72efdd");
     }
-    spawnOlySpBurst(olySpBallX, olySpBallY, "#ffd166", 9);
+    spawnOlySpBurst(olySpBallWorldX, olySpBallY, "#ffd166", 9);
   }
 }
 
@@ -194,7 +199,11 @@ function landOlyShotput() {
     olySpLastScore = olySpScoreCm;
   }
 
-  spawnOlySpBurst(olySpBallX, OLY_SP_GROUND_Y + 2, olySpFoul ? "#ff4d6d" : "#ffd166", 16);
+  const impactScreenX = Math.max(
+    24,
+    Math.min(canvas.width - 24, olySpBallWorldX - olySpCamScrollPx)
+  );
+  spawnOlySpBurst(impactScreenX, OLY_SP_GROUND_Y + 2, olySpFoul ? "#ff4d6d" : "#ffd166", 16);
 
   const isNewBest = !olySpFoul && olySpScoreCm > olySpBestCm;
   if (isNewBest) {
@@ -225,25 +234,21 @@ function updateOlyShotput() {
     }
 
     olySpX = Math.min(125, OLY_SP_START_X + Math.min(olySpCirclePos, 8) * 3.5);
-    olySpBallX = olySpX + 9;
+    olySpBallWorldX = olySpX + 9;
     olySpBallY = olySpY - 24;
-
-    if (olySpCirclePos >= OLY_SP_MAX_POS) {
-      olySpCirclePos = OLY_SP_MAX_POS;
-      releaseOlyShotput(true);
-    }
+    olySpCamScrollPx = 0;
   } else if (olySpPhase === "flight") {
-    olySpTrail.push({ x: olySpBallX, y: olySpBallY });
-    if (olySpTrail.length > 22) olySpTrail.shift();
-
-    olySpBallX += olySpBallVx;
+    olySpBallWorldX += olySpBallVx;
     olySpBallY += olySpBallVy;
-    olySpBallVy += 0.21;
+    olySpBallVy += 0.19;
     olySpFlightPx += Math.hypot(olySpBallVx, olySpBallVy);
 
-    if (olySpBallX > canvas.width - 28) {
-      olySpBallX = canvas.width - 28;
-    }
+    olySpTrail.push({ worldX: olySpBallWorldX, y: olySpBallY });
+    if (olySpTrail.length > 34) olySpTrail.shift();
+
+    // 카메라가 날아가는 투포환을 부드럽게 따라감 (공이 화면 56% 지점 부근에 오도록 스크롤)
+    const targetCamScroll = Math.max(0, olySpBallWorldX - canvas.width * 0.56);
+    olySpCamScrollPx += (targetCamScroll - olySpCamScrollPx) * 0.18;
 
     if (olySpBallY >= OLY_SP_GROUND_Y + 2) {
       olySpBallY = OLY_SP_GROUND_Y + 2;
@@ -264,10 +269,8 @@ function drawOlyShotputFrame() {
     ctx.fillStyle = "#191b26";
     ctx.fillRect(0, 0, canvas.width, 130);
 
-    // 단일 지면 스크롤 기준으로 스톱보드·필드 경계·바닥 무늬를 함께 왼쪽으로 당김
-    const groundScrollPx =
-      olySpCirclePos * OLY_SP_PX_PER_M +
-      (olySpPhase === "flight" || olySpPhase === "done" ? olySpFlightPx * 0.35 : 0);
+    // 서클 전진 스크롤 + 비행 중 카메라 추격 스크롤을 합친 단일 지면 스크롤
+    const groundScrollPx = olySpCirclePos * OLY_SP_PX_PER_M + olySpCamScrollPx;
     const boardX =
       OLY_SP_START_X +
       OLY_SP_FOUL_POS * OLY_SP_PX_PER_M -
@@ -291,7 +294,7 @@ function drawOlyShotputFrame() {
     }
 
     // 스톱보드(파울선 20m)
-    if (boardX >= -10 && boardX <= canvas.width + 10) {
+    if (boardX >= -20 && boardX <= canvas.width + 20) {
       ctx.fillStyle = "#ffd166";
       ctx.fillRect(boardX - 3, 132, 6, 206);
       ctx.font = "bold 10px sans-serif";
@@ -356,54 +359,72 @@ function drawOlyShotputFrame() {
     ctx.font = "600 10px sans-serif";
     ctx.fillText("상단 터치 또는 ↑ / W / Space = 각도 맞춰 투척", canvas.width * 0.5, 392);
 
-    // 비행 궤적 점선
+    // 카메라 스크롤 반영 비행 궤적
     for (let i = 0; i < olySpTrail.length; i++) {
       const t = olySpTrail[i];
-      ctx.fillStyle = olySpFoul ? "rgba(255, 77, 109, 0.35)" : "rgba(255, 209, 102, 0.38)";
+      const tx = t.worldX - olySpCamScrollPx;
+      if (tx >= -12 && tx <= canvas.width + 12) {
+        ctx.fillStyle = olySpFoul ? "rgba(255, 77, 109, 0.38)" : "rgba(255, 209, 102, 0.42)";
+        ctx.beginPath();
+        ctx.arc(tx, t.y, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // 선수 캐릭터 (카메라가 따라가면서 왼쪽으로 밀려남)
+    const lifterScreenX = olySpX - olySpCamScrollPx;
+    if (lifterScreenX >= -40 && lifterScreenX <= canvas.width + 40) {
+      const bob = olySpPhase === "charge" ? Math.sin(olySpFrame * 0.45) * (olySpPower > 15 ? 2.5 : 0) : 0;
+      const drawY = olySpY + bob;
+      const legSwing = olySpPhase === "flight" ? 7 : Math.sin(olySpFrame * 0.55) * (olySpPower > 15 ? 9 : 1);
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
       ctx.beginPath();
-      ctx.arc(t.x, t.y, 2.5, 0, Math.PI * 2);
+      ctx.ellipse(lifterScreenX, OLY_SP_GROUND_Y + 4, 15, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "#f4f4f6";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(lifterScreenX, drawY - 14);
+      ctx.lineTo(lifterScreenX + legSwing, drawY + 2);
+      ctx.moveTo(lifterScreenX, drawY - 14);
+      ctx.lineTo(lifterScreenX - legSwing, drawY + 2);
+      ctx.stroke();
+
+      ctx.fillStyle = "#e65c7b";
+      ctx.beginPath();
+      ctx.arc(lifterScreenX, drawY - 22, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffd166";
+      ctx.beginPath();
+      ctx.arc(lifterScreenX + 2, drawY - 36, 8, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // 선수 캐릭터
-    const bob = olySpPhase === "charge" ? Math.sin(olySpFrame * 0.45) * (olySpPower > 15 ? 2.5 : 0) : 0;
-    const drawY = olySpY + bob;
-    const legSwing = olySpPhase === "flight" ? 7 : Math.sin(olySpFrame * 0.55) * (olySpPower > 15 ? 9 : 1);
+    // 투포환 공 (카메라가 따라가므로 화면 안에 계속 잡힘)
+    const bx =
+      olySpPhase === "charge"
+        ? lifterScreenX + 9
+        : olySpBallWorldX - olySpCamScrollPx;
+    const by = olySpPhase === "charge" ? olySpY - 24 : olySpBallY;
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
-    ctx.beginPath();
-    ctx.ellipse(olySpX, OLY_SP_GROUND_Y + 4, 15, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (bx >= -20 && bx <= canvas.width + 20) {
+      // 공 아래 지면 그림자
+      ctx.fillStyle = "rgba(15, 23, 42, 0.28)";
+      ctx.beginPath();
+      ctx.ellipse(bx, OLY_SP_GROUND_Y + 4, 8, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-    ctx.strokeStyle = "#f4f4f6";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(olySpX, drawY - 14);
-    ctx.lineTo(olySpX + legSwing, drawY + 2);
-    ctx.moveTo(olySpX, drawY - 14);
-    ctx.lineTo(olySpX - legSwing, drawY + 2);
-    ctx.stroke();
-
-    ctx.fillStyle = "#e65c7b";
-    ctx.beginPath();
-    ctx.arc(olySpX, drawY - 22, 9, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = "#ffd166";
-    ctx.beginPath();
-    ctx.arc(olySpX + 2, drawY - 36, 8, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 투포환 공
-    const bx = olySpPhase === "charge" ? olySpX + 9 : olySpBallX;
-    const by = olySpPhase === "charge" ? drawY - 24 : olySpBallY;
-    ctx.fillStyle = olySpFoul ? "#ff4d6d" : "#dce1eb";
-    ctx.beginPath();
-    ctx.arc(bx, by, 7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "#12131a";
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
+      ctx.fillStyle = olySpFoul ? "#ff4d6d" : "#dce1eb";
+      ctx.beginPath();
+      ctx.arc(bx, by, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#12131a";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
 
     // 파티클 & 팝업
     for (let i = olySpParticles.length - 1; i >= 0; i--) {
@@ -510,7 +531,7 @@ registerGame({
   id: "oly-shotput",
   title: "투포환",
   icon: "🏋️",
-  desc: "파워 충전과 릴리즈 각도 타이밍으로 최장 투포환 기록에 도전!",
+  desc: "파워 충전과 릴리즈 각도 타이밍, 날아가는 공을 쫓는 카메라로 최장 기록 도전!",
   aspect: "tall",
   sortOrder: "desc",
   unit: "m",
