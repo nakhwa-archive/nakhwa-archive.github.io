@@ -528,3 +528,54 @@ function drawBarricadeFrame() {
     ctx.fillText(String(err && err.message ? err.message : err), canvas.width / 2, 195);
   }
 }
+
+registerGame({
+  id: "barricade",
+  title: "낙화 좀비 바리케이드",
+  icon: "🧟",
+  desc: "산탄·관통탄으로 바리케이드 앞 좀비 무리 방어!",
+  aspect: "tall",
+  unit: "점",
+  hint: "터치/클릭 조준 사격(PC: ←→ + 스페이스) · 산탄/관통탄 상자 획득!",
+  rankingTitle: "🧟 좀비 바리케이드 TOP 5",
+  dbNode: "barricade_scores",
+  getBadge: () => `BEST ${bcBest}점`,
+  getScore: () => bcLastScore,
+  reset: resetBarricade,
+  draw: drawBarricadeFrame,
+  stop: () => {
+    bcRunning = false;
+    bcPointerDown = false;
+  },
+  onPointerDown: (x, y) => {
+    if (bcOver || !bcRunning) {
+      if (!canRestartNow()) return;
+      resetBarricade();
+      return;
+    }
+    aimBarricadeAt(x, y);
+    bcPointerDown = true;
+    fireBarricadeWeapon();
+  },
+  onPointerMove: (x, y, e) => {
+    if (bcPointerDown && !bcOver) {
+      e.preventDefault();
+      aimBarricadeAt(x, y);
+    }
+  },
+  onPointerUp: () => {
+    bcPointerDown = false;
+  },
+  onKeyDown: (e) => {
+    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
+    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); dodgeKeys.right = true; }
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (!e.repeat) fireBarricadeWeapon();
+    }
+  },
+  onKeyUp: (e) => {
+    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") dodgeKeys.left = false;
+    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") dodgeKeys.right = false;
+  }
+});
