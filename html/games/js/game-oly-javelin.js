@@ -1,4 +1,4 @@
-/* ---------- 올림픽 5. 창던지기 (Javelin Throw) ---------- */
+/* ---------- 올림픽 5. 창던지기 (Javelin Throw - Camera Follow) ---------- */
 var olyJvRunning = false;
 var olyJvOver = false;
 var olyJvFinished = false;
@@ -15,13 +15,16 @@ var olyJvFrame = 0;
 
 var olyJvX = 95;
 var olyJvY = 294;
-var olyJvSpearX = 104;
+
+// 창의 월드 좌표 및 카메라 추적 스크롤
+var olyJvSpearWorldX = 104;
 var olyJvSpearY = 272;
 var olyJvSpearVx = 0;
 var olyJvSpearVy = 0;
 var olyJvSpearAngle = -0.42;
 var olyJvFlightPx = 0;
-var olyJvTrace = [];
+var olyJvCamScrollPx = 0;
+var olyJvTrace = []; // { worldX, y }
 
 var olyJvThrowDistM = 0;
 var olyJvScoreCm = 0;
@@ -66,12 +69,13 @@ function resetOlyJavelin() {
 
   olyJvX = OLY_JV_START_X;
   olyJvY = OLY_JV_GROUND_Y;
-  olyJvSpearX = olyJvX + 9;
+  olyJvSpearWorldX = olyJvX + 9;
   olyJvSpearY = olyJvY - 22;
   olyJvSpearVx = 0;
   olyJvSpearVy = 0;
   olyJvSpearAngle = -0.42;
   olyJvFlightPx = 0;
+  olyJvCamScrollPx = 0;
   olyJvTrace = [];
 
   olyJvThrowDistM = 0;
@@ -158,22 +162,23 @@ function launchOlyJavelin(forceFoul = false) {
   const launchPower = speedRatio * 0.65 + timingRatio * 0.35;
 
   olyJvPhase = "flight";
-  olyJvSpearX = olyJvX + 10;
+  olyJvSpearWorldX = olyJvX + 10;
   olyJvSpearY = olyJvY - 24;
   olyJvSpearVx = 4.6 + launchPower * 5.2;
   olyJvSpearVy = -(3.2 + launchPower * 3.1);
   olyJvSpearAngle = Math.atan2(olyJvSpearVy, olyJvSpearVx);
   olyJvFlightPx = 0;
-  olyJvTrace = [];
+  olyJvCamScrollPx = 0;
+  olyJvTrace = [{ worldX: olyJvSpearWorldX, y: olyJvSpearY }];
 
   if (olyJvFoul) {
     addOlyJvPopup(olyJvX, olyJvY - 38, "🚫 FOUL!", "#ff4d6d");
     spawnOlyJvBurst(olyJvX, OLY_JV_GROUND_Y, "#ff4d6d", 12);
   } else if (olyJvDist >= 27.0 && olyJvSpeed >= 1.1) {
     addOlyJvPopup(olyJvX, olyJvY - 38, "⚡ SWEET SPOT!", "#ffd166");
-    spawnOlyJvBurst(olyJvSpearX, olyJvSpearY, "#ffd166", 12);
+    spawnOlyJvBurst(olyJvSpearWorldX, olyJvSpearY, "#ffd166", 12);
   } else {
-    spawnOlyJvBurst(olyJvSpearX, olyJvSpearY, "#72efdd", 8);
+    spawnOlyJvBurst(olyJvSpearWorldX, olyJvSpearY, "#72efdd", 8);
   }
 }
 
@@ -193,7 +198,11 @@ function landOlyJavelin() {
     olyJvLastScore = olyJvScoreCm;
   }
 
-  spawnOlyJvBurst(olyJvSpearX, OLY_JV_GROUND_Y + 2, olyJvFoul ? "#ff4d6d" : "#72efdd", 16);
+  const impactScreenX = Math.max(
+    24,
+    Math.min(canvas.width - 24, olyJvSpearWorldX - olyJvCamScrollPx)
+  );
+  spawnOlyJvBurst(impactScreenX, OLY_JV_GROUND_Y + 2, olyJvFoul ? "#ff4d6d" : "#72efdd", 16);
 
   const isNewBest = !olyJvFoul && olyJvScoreCm > olyJvBestCm;
   if (isNewBest) {
@@ -214,27 +223,28 @@ function updateOlyJavelin() {
     olyJvDist += olyJvSpeed * 0.24;
 
     olyJvX = Math.min(125, OLY_JV_START_X + Math.min(olyJvDist, 10) * 3.0);
-    olyJvSpearX = olyJvX + 9;
+    olyJvSpearWorldX = olyJvX + 9;
     olyJvSpearY = olyJvY - 22;
     olyJvSpearAngle = -0.42;
+    olyJvCamScrollPx = 0;
 
     if (olyJvDist >= OLY_JV_MAX_DIST) {
       olyJvDist = OLY_JV_MAX_DIST;
       launchOlyJavelin(true);
     }
   } else if (olyJvPhase === "flight") {
-    olyJvTrace.push({ x: olyJvSpearX, y: olyJvSpearY });
-    if (olyJvTrace.length > 28) olyJvTrace.shift();
-
-    olyJvSpearX += olyJvSpearVx;
+    olyJvSpearWorldX += olyJvSpearVx;
     olyJvSpearY += olyJvSpearVy;
     olyJvSpearVy += 0.15;
     olyJvFlightPx += Math.hypot(olyJvSpearVx, olyJvSpearVy);
     olyJvSpearAngle = Math.atan2(olyJvSpearVy, olyJvSpearVx);
 
-    if (olyJvSpearX > canvas.width - 28) {
-      olyJvSpearX = canvas.width - 28;
-    }
+    olyJvTrace.push({ worldX: olyJvSpearWorldX, y: olyJvSpearY });
+    if (olyJvTrace.length > 34) olyJvTrace.shift();
+
+    // 날아가는 창을 카메라가 부드럽게 추적
+    const targetCamScroll = Math.max(0, olyJvSpearWorldX - canvas.width * 0.56);
+    olyJvCamScrollPx += (targetCamScroll - olyJvCamScrollPx) * 0.18;
 
     if (olyJvSpearY >= OLY_JV_GROUND_Y + 2) {
       olyJvSpearY = OLY_JV_GROUND_Y + 2;
@@ -279,9 +289,7 @@ function drawOlyJavelinFrame() {
     ctx.fillRect(0, 0, canvas.width, 130);
 
     // 단일 지면 스크롤 기준으로 스위트존·파울라인·필드 경계·바닥 무늬를 함께 왼쪽으로 당김
-    const groundScrollPx =
-      olyJvDist * OLY_JV_PX_PER_M +
-      (olyJvPhase === "flight" || olyJvPhase === "done" ? olyJvFlightPx * 0.35 : 0);
+    const groundScrollPx = olyJvDist * OLY_JV_PX_PER_M + olyJvCamScrollPx;
     const sweetStartX =
       OLY_JV_START_X +
       OLY_JV_SWEET_START * OLY_JV_PX_PER_M -
@@ -317,7 +325,7 @@ function drawOlyJavelinFrame() {
     }
 
     // 파울 라인(28m)
-    if (foulLineX >= -10 && foulLineX <= canvas.width + 10) {
+    if (foulLineX >= -20 && foulLineX <= canvas.width + 20) {
       ctx.fillStyle = "#ffd166";
       ctx.fillRect(foulLineX - 2, 132, 4, 206);
       ctx.font = "bold 10px sans-serif";
@@ -389,53 +397,71 @@ function drawOlyJavelinFrame() {
     ctx.font = "600 10px sans-serif";
     ctx.fillText("상단 터치 또는 ↑ / W / Space = 창 던지기", canvas.width * 0.5, 392);
 
-    // 비행 궤적
+    // 카메라 스크롤 반영 비행 궤적
     if (olyJvTrace.length > 1) {
-      ctx.strokeStyle = olyJvFoul ? "rgba(255, 77, 109, 0.45)" : "rgba(114, 239, 221, 0.45)";
+      ctx.strokeStyle = olyJvFoul ? "rgba(255, 77, 109, 0.48)" : "rgba(114, 239, 221, 0.48)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(olyJvTrace[0].x, olyJvTrace[0].y);
-      for (let i = 1; i < olyJvTrace.length; i++) {
-        ctx.lineTo(olyJvTrace[i].x, olyJvTrace[i].y);
+      let started = false;
+      for (let i = 0; i < olyJvTrace.length; i++) {
+        const tx = olyJvTrace[i].worldX - olyJvCamScrollPx;
+        const ty = olyJvTrace[i].y;
+        if (!started) {
+          ctx.moveTo(tx, ty);
+          started = true;
+        } else {
+          ctx.lineTo(tx, ty);
+        }
       }
-      ctx.lineTo(olyJvSpearX, olyJvSpearY);
       ctx.stroke();
     }
 
-    // 선수 캐릭터
+    // 선수 캐릭터 (카메라 추적에 따라 왼쪽으로 밀려남)
+    const throwerScreenX = olyJvX - olyJvCamScrollPx;
     const bob = olyJvPhase === "run" ? Math.sin(olyJvFrame * 0.45) * (olyJvSpeed > 0.2 ? 3 : 0) : 0;
     const drawY = olyJvY + bob;
-    const legSwing = olyJvPhase === "flight" ? 7 : Math.sin(olyJvFrame * 0.55) * (olyJvSpeed > 0.2 ? 10 : 1);
 
-    ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
-    ctx.beginPath();
-    ctx.ellipse(olyJvX, OLY_JV_GROUND_Y + 4, 15, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
+    if (throwerScreenX >= -40 && throwerScreenX <= canvas.width + 40) {
+      const legSwing = olyJvPhase === "flight" ? 7 : Math.sin(olyJvFrame * 0.55) * (olyJvSpeed > 0.2 ? 10 : 1);
 
-    ctx.strokeStyle = "#f4f4f6";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(olyJvX, drawY - 14);
-    ctx.lineTo(olyJvX + legSwing, drawY + 2);
-    ctx.moveTo(olyJvX, drawY - 14);
-    ctx.lineTo(olyJvX - legSwing, drawY + 2);
-    ctx.stroke();
+      ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+      ctx.beginPath();
+      ctx.ellipse(throwerScreenX, OLY_JV_GROUND_Y + 4, 15, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
 
-    ctx.fillStyle = "#e65c7b";
-    ctx.beginPath();
-    ctx.arc(olyJvX, drawY - 22, 9, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.strokeStyle = "#f4f4f6";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(throwerScreenX, drawY - 14);
+      ctx.lineTo(throwerScreenX + legSwing, drawY + 2);
+      ctx.moveTo(throwerScreenX, drawY - 14);
+      ctx.lineTo(throwerScreenX - legSwing, drawY + 2);
+      ctx.stroke();
 
-    ctx.fillStyle = "#ffd166";
-    ctx.beginPath();
-    ctx.arc(olyJvX + 2, drawY - 36, 8, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.fillStyle = "#e65c7b";
+      ctx.beginPath();
+      ctx.arc(throwerScreenX, drawY - 22, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffd166";
+      ctx.beginPath();
+      ctx.arc(throwerScreenX + 2, drawY - 36, 8, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // 창 렌더링
     if (olyJvPhase === "run") {
-      drawJavelinSpear(olyJvX + 9, drawY - 22, -0.42, "#f4f4f6");
+      drawJavelinSpear(throwerScreenX + 9, drawY - 22, -0.42, "#f4f4f6");
     } else {
-      drawJavelinSpear(olyJvSpearX, olyJvSpearY, olyJvSpearAngle, olyJvFoul ? "#ff4d6d" : "#72efdd");
+      const spearScreenX = olyJvSpearWorldX - olyJvCamScrollPx;
+      if (spearScreenX >= -45 && spearScreenX <= canvas.width + 45) {
+        drawJavelinSpear(
+          spearScreenX,
+          olyJvSpearY,
+          olyJvSpearAngle,
+          olyJvFoul ? "#ff4d6d" : "#72efdd"
+        );
+      }
     }
 
     // 파티클 & 팝업
@@ -543,7 +569,7 @@ registerGame({
   id: "oly-javelin",
   title: "창던지기",
   icon: "🎯",
-  desc: "도움닫기 가속과 스위트 스팟 타이밍으로 창을 멀리 꽂아라!",
+  desc: "도움닫기 가속과 스위트 스팟 타이밍, 카메라 추적 비행으로 창을 멀리 꽂아라!",
   aspect: "tall",
   sortOrder: "desc",
   unit: "m",
