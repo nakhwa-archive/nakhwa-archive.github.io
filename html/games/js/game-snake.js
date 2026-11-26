@@ -233,3 +233,55 @@ function drawSnakeFrame() {
     }
   }
 }
+
+registerGame({
+  id: "snake",
+  title: "꼬리잡기 스네이크",
+  icon: "🐍",
+  desc: "경단과 벚꽃 보석을 먹으며 꼬리 길게 늘리기",
+  aspect: "tall",
+  unit: "점",
+  hint: "상하좌우 스와이프(모바일) 또는 방향키/WASD(PC) 이동!",
+  rankingTitle: "🐍 꼬리잡기 TOP 5",
+  dbNode: "snake_scores",
+  getBadge: () => `BEST ${snakeBest}점`,
+  getScore: () => snakeScore,
+  reset: resetSnake,
+  draw: drawSnakeFrame,
+  stop: () => {
+    snakeRunning = false;
+    snakeSwipeStart = null;
+  },
+  onPointerDown: (x, y, e) => {
+    if (snakeOver || !snakeRunning) {
+      if (!canRestartNow()) return;
+      resetSnake();
+      return;
+    }
+    snakeSwipeStart = { x: e.clientX, y: e.clientY };
+  },
+  onPointerMove: (x, y, e) => {
+    if (snakeSwipeStart && !snakeOver) {
+      e.preventDefault();
+      const dx = e.clientX - snakeSwipeStart.x;
+      const dy = e.clientY - snakeSwipeStart.y;
+      if (Math.hypot(dx, dy) >= 18) {
+        if (Math.abs(dx) > Math.abs(dy)) {
+          queueSnakeDirection(dx > 0 ? 1 : -1, 0);
+        } else {
+          queueSnakeDirection(0, dy > 0 ? 1 : -1);
+        }
+        snakeSwipeStart = { x: e.clientX, y: e.clientY };
+      }
+    }
+  },
+  onPointerUp: () => {
+    snakeSwipeStart = null;
+  },
+  onKeyDown: (e) => {
+    if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { e.preventDefault(); queueSnakeDirection(0, -1); }
+    if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") { e.preventDefault(); queueSnakeDirection(0, 1); }
+    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); queueSnakeDirection(-1, 0); }
+    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); queueSnakeDirection(1, 0); }
+  }
+});
