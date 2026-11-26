@@ -305,3 +305,31 @@ function drawSmashFrame() {
 
   ctx.restore();
 }
+
+registerGame({
+  id: "smash",
+  title: "건물 부수기",
+  icon: "🏢",
+  desc: "연타로 기를 모아 일격에 초고층 빌딩 박살내기",
+  aspect: "tall",
+  unit: "층",
+  hint: "5초간 미친 듯이 연타 후, 정중앙 타이밍에 맞춰 일격!",
+  rankingTitle: "🏢 건물 부수기 TOP 5",
+  dbNode: "smash_scores",
+  getBadge: () => `BEST ${smashBest}층`,
+  getScore: () => smashTargetFloors,
+  reset: resetSmash,
+  draw: drawSmashFrame,
+  stop: () => {
+    smashState = "idle";
+  },
+  onPointerDown: () => {
+    handleSmashAction();
+  },
+  onKeyDown: (e) => {
+    if (e.code === "Space" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!e.repeat) handleSmashAction();
+    }
+  }
+});
