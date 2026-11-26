@@ -312,3 +312,31 @@ function drawBubbleFrame() {
     }
   }
 }
+
+registerGame({
+  id: "bubble",
+  title: "거품 팡팡 버블 팝",
+  icon: "🫧",
+  desc: "같은 색 거품 연쇄 폭발! 30초 순발력 타임어택",
+  aspect: "tall",
+  unit: "점",
+  hint: "같은 색 거품을 연속 터치하면 연쇄 폭발! 가시 거품(💣)은 주의!",
+  rankingTitle: "🫧 버블 팝 TOP 5",
+  dbNode: "bubble_scores",
+  getBadge: () => `BEST ${bubbleBest}점`,
+  getScore: () => bubbleLastScore,
+  reset: resetBubble,
+  draw: drawBubbleFrame,
+  stop: () => {
+    bubbleRunning = false;
+  },
+  onPointerDown: (x, y) => {
+    handleBubbleTap(x, y);
+  },
+  onKeyDown: (e) => {
+    if (e.code === "Space" && (bubbleOver || !bubbleRunning)) {
+      e.preventDefault();
+      if (!e.repeat && canRestartNow()) resetBubble();
+    }
+  }
+});
