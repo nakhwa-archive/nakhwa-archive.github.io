@@ -181,3 +181,66 @@ function drawDodgeFrame() {
     }
   }
 }
+
+registerGame({
+  id: "dodge",
+  title: "낙화 닷지",
+  icon: "💥",
+  desc: "사방에서 날아오는 탄막 사이에서 오래 버티기",
+  aspect: "wide",
+  unit: "초",
+  hint: "드래그(모바일) 또는 방향키/WASD(PC)로 탄막 회피!",
+  rankingTitle: "💥 낙화 닷지 TOP 5 (생존 시간)",
+  dbNode: "dodge_scores",
+  formatScore: (score) => `${(score / 1000).toFixed(2)}초`,
+  getBadge: () => `BEST ${(dodgeBestMs / 1000).toFixed(2)}초`,
+  getScore: () => dodgeElapsedMs,
+  reset: resetDodge,
+  draw: drawDodgeFrame,
+  stop: () => {
+    dodgeRunning = false;
+    dodgePointerActive = false;
+  },
+  onPointerDown: (x, y) => {
+    if (dodgeOver || !dodgeRunning) {
+      if (!canRestartNow()) return;
+      resetDodge();
+      return;
+    }
+    dodgePointerActive = true;
+    dodgeLastPointer = { x, y };
+  },
+  onPointerMove: (x, y, e) => {
+    if (dodgePointerActive && !dodgeOver) {
+      e.preventDefault();
+      const dx = x - dodgeLastPointer.x;
+      const dy = y - dodgeLastPointer.y;
+      dodgeLastPointer = { x, y };
+      dodgeShip.x = Math.max(dodgeShip.r + 4, Math.min(canvas.width - dodgeShip.r - 4, dodgeShip.x + dx * 1.15));
+      dodgeShip.y = Math.max(dodgeShip.r + 4, Math.min(canvas.height - dodgeShip.r - 4, dodgeShip.y + dy * 1.15));
+    }
+  },
+  onPointerUp: () => {
+    dodgePointerActive = false;
+  },
+  onKeyDown: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") { e.preventDefault(); dodgeKeys.up = true; }
+      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") { e.preventDefault(); dodgeKeys.down = true; }
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); dodgeKeys.right = true; }
+    }
+    if (e.code === "Space" && (dodgeOver || !dodgeRunning)) {
+      e.preventDefault();
+      if (!e.repeat && canRestartNow()) resetDodge();
+    }
+  },
+  onKeyUp: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") dodgeKeys.up = false;
+      if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") dodgeKeys.down = false;
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") dodgeKeys.left = false;
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") dodgeKeys.right = false;
+    }
+  }
+});
