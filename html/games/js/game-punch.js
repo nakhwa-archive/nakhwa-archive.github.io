@@ -375,3 +375,52 @@ function drawPunchFrame() {
 
   ctx.restore();
 }
+
+registerGame({
+  id: "punch",
+  title: "낙화 펀치아웃",
+  icon: "🥊",
+  desc: "상대의 예비 동작을 피하고 빈틈에 카운터 어퍼컷!",
+  aspect: "tall",
+  unit: "점",
+  hint: "좌/우 터치(←→)=회피 · 중앙 터치(↑/스페이스)=카운터 펀치!",
+  rankingTitle: "🥊 낙화 펀치아웃 TOP 5",
+  dbNode: "punch_scores",
+  getBadge: () => `BEST ${punchBest}점`,
+  getScore: () => punchScore,
+  reset: resetPunch,
+  draw: drawPunchFrame,
+  stop: () => {
+    punchRunning = false;
+  },
+  onPointerDown: (x) => {
+    if (punchOver || !punchRunning) {
+      if (!canRestartNow()) return;
+      resetPunch();
+      return;
+    }
+    if (x < canvas.width * 0.3) {
+      punchDodge("L");
+    } else if (x > canvas.width * 0.7) {
+      punchDodge("R");
+    } else {
+      punchAttack();
+    }
+  },
+  onKeyDown: (e) => {
+    if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+      e.preventDefault();
+      if (!e.repeat) punchDodge("L");
+      return;
+    }
+    if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+      e.preventDefault();
+      if (!e.repeat) punchDodge("R");
+      return;
+    }
+    if (e.code === "Space" || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+      e.preventDefault();
+      if (!e.repeat) punchAttack();
+    }
+  }
+});
