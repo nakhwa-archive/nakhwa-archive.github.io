@@ -415,3 +415,59 @@ function drawGalagaFrame() {
     }
   }
 }
+
+registerGame({
+  id: "galaga",
+  title: "낙화 갤러그",
+  icon: "🚀",
+  desc: "돌격해 오는 적 편대를 격추하는 레트로 슈팅",
+  aspect: "tall",
+  unit: "점",
+  hint: "좌우 드래그(모바일) 또는 방향키(PC) 이동 · 자동 발사!",
+  rankingTitle: "🚀 낙화 갤러그 TOP 5",
+  dbNode: "galaga_scores",
+  getBadge: () => `BEST ${galagaBest}점`,
+  getScore: () => galagaScore,
+  reset: resetGalaga,
+  draw: drawGalagaFrame,
+  stop: () => {
+    galagaRunning = false;
+    galagaDragging = false;
+  },
+  onPointerDown: (x) => {
+    if (galagaOver || !galagaRunning) {
+      if (!canRestartNow()) return;
+      resetGalaga();
+      return;
+    }
+    galagaDragging = true;
+    galagaLastDragX = x;
+  },
+  onPointerMove: (x, y, e) => {
+    if (galagaDragging && !galagaOver) {
+      e.preventDefault();
+      const dx = x - galagaLastDragX;
+      galagaLastDragX = x;
+      galagaShip.x = Math.max(18, Math.min(canvas.width - 18, galagaShip.x + dx * 1.15));
+    }
+  },
+  onPointerUp: () => {
+    galagaDragging = false;
+  },
+  onKeyDown: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); dodgeKeys.right = true; }
+    }
+    if (e.code === "Space" && (galagaOver || !galagaRunning)) {
+      e.preventDefault();
+      if (!e.repeat && canRestartNow()) resetGalaga();
+    }
+  },
+  onKeyUp: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") dodgeKeys.left = false;
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") dodgeKeys.right = false;
+    }
+  }
+});
