@@ -441,7 +441,7 @@ registerGame({
   unit: "s",
   hint: "좌/우 번갈아 달리기 · 허들 앞에서 상단 터치(PC: ↑/W/Space)로 점프!",
   rankingTitle: "🏃 110m 허들 TOP 5 (최단 시간)",
-  dbNode: "oly_hurdles_scores",
+  dbNode: "oly_hurdle_scores",
   formatScore: (score) => `${(score / 100).toFixed(2)}s`,
   getBadge: () => (olyHdBestCs > 0 ? `BEST ${(olyHdBestCs / 100).toFixed(2)}s` : "BEST --.--s"),
   getScore: () => olyHdLastScore,
