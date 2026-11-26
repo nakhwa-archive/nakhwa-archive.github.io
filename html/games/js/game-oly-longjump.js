@@ -4,13 +4,13 @@ var olyLjOver = false;
 var olyLjFinished = false;
 
 var olyLjPhase = "run"; // "run" | "jump" | "done"
-var olyLjDist = 0; // 도움닫기 거리 (0 ~ 18m)
+var olyLjDist = 0; // 도움닫기 거리 (0 ~ 31m)
 var olyLjSpeed = 0;
 var olyLjLastSide = 0;
 var olyLjLastStepFrame = 0;
 var olyLjFrame = 0;
 
-var olyLjX = 75;
+var olyLjX = 95;
 var olyLjY = 294;
 var olyLjVx = 0;
 var olyLjVy = 0;
@@ -23,8 +23,10 @@ var olyLjBestCm = Number(localStorage.getItem("nakhwaOlyLongJumpBestCm") || 0);
 var olyLjParticles = [];
 var olyLjPopups = [];
 
-var OLY_LJ_FOUL_DIST = 15.8;
+var OLY_LJ_FOUL_DIST = 28.0;
+var OLY_LJ_MAX_RUN_DIST = 31.0;
 var OLY_LJ_GROUND_Y = 294;
+var OLY_LJ_PX_PER_METER = 14;
 
 function resetOlyLongJump() {
   olyLjPhase = "run";
@@ -33,7 +35,7 @@ function resetOlyLongJump() {
   olyLjLastSide = 0;
   olyLjLastStepFrame = 0;
   olyLjFrame = 0;
-  olyLjX = 75;
+  olyLjX = 95;
   olyLjY = OLY_LJ_GROUND_Y;
   olyLjVx = 0;
   olyLjVy = 0;
@@ -77,7 +79,7 @@ function stepOlyLongJumpStride(side) {
   const isAlternating = olyLjLastSide !== side;
 
   if (isAlternating) {
-    const bonus = diffFrames >= 5 && diffFrames <= 17 ? 0.28 : 0.18;
+    const bonus = diffFrames >= 5 && diffFrames <= 17 ? 0.26 : 0.17;
     olyLjSpeed = Math.min(1.85, olyLjSpeed + bonus);
     spawnOlyLjBurst(olyLjX, OLY_LJ_GROUND_Y, "#ff8ca5", 4);
   } else {
@@ -93,19 +95,19 @@ function takeoffOlyLongJump() {
   if (!olyLjRunning || olyLjOver || olyLjFinished || olyLjPhase !== "run") return;
 
   const distDiff = Math.abs(olyLjDist - OLY_LJ_FOUL_DIST);
-  const timingFactor = Math.max(0.45, 1 - distDiff / 7.5);
+  const timingFactor = Math.max(0.45, 1 - distDiff / 12.0);
   const speedFactor = Math.max(0.35, Math.min(1.25, olyLjSpeed * 0.88));
   const jumpPower = speedFactor * timingFactor;
 
   olyLjPhase = "jump";
-  olyLjVy = -(6.2 + jumpPower * 5.2);
-  olyLjVx = 2.6 + jumpPower * 2.5;
+  olyLjVy = -(2.8 + jumpPower * 1.9);
+  olyLjVx = 2.6 + jumpPower * 2.4;
   olyLjAirGainPx = 0;
 
   spawnOlyLjBurst(olyLjX, OLY_LJ_GROUND_Y, "#ffd166", 10);
 
-  if (distDiff <= 1.1 && olyLjSpeed >= 0.9) {
-    addOlyLjPopup(olyLjX, olyLjY - 34, "🔥 PERFECT TAKEOFF!", "#ffd166");
+  if (distDiff <= 1.5 && olyLjSpeed >= 0.9) {
+    addOlyLjPopup(olyLjX, olyLjY - 30, "🔥 PERFECT TAKEOFF!", "#ffd166");
   }
 }
 
@@ -114,7 +116,6 @@ function landOlyLongJump() {
   olyLjFinished = true;
   olyLjRunning = false;
 
-  // 멀리뛰기 기록 산출 (4.20m ~ 8.95m 범위)
   const rawMeters = Math.max(3.80, Math.min(9.05, 4.20 + olyLjAirGainPx * 0.022));
   const finalMeters = Number(rawMeters.toFixed(2));
   olyLjJumpDistM = finalMeters;
@@ -141,23 +142,20 @@ function drawOlyLongJumpFrame() {
 
       if (olyLjPhase === "run") {
         const minRunSpeed = olyLjDist > 0.5 ? 0.14 : 0;
-        olyLjSpeed = Math.max(minRunSpeed, olyLjSpeed * 0.968);
-        olyLjDist += olyLjSpeed * 0.24;
+        olyLjSpeed = Math.max(minRunSpeed, olyLjSpeed * 0.97);
+        olyLjDist += olyLjSpeed * 0.25;
 
-        // 화면 오른쪽으로 넘어가도 거리가 계속 누적되도록 카메라/위치 보정
-        const targetX = 75 + (olyLjDist / OLY_LJ_FOUL_DIST) * 145;
-        olyLjX = Math.min(235, targetX);
+        olyLjX = Math.min(130, 95 + Math.min(olyLjDist, 10) * 3.5);
 
-        if (olyLjDist >= 17.8) {
+        if (olyLjDist >= OLY_LJ_MAX_RUN_DIST) {
           takeoffOlyLongJump();
         }
       } else if (olyLjPhase === "jump") {
-        // 화면 끝(255px)을 넘어도 공중 비행 거리는 계속 진행
         const stepPx = olyLjVx;
         olyLjAirGainPx += stepPx;
-        olyLjX = Math.min(255, olyLjX + stepPx * 0.65);
+        olyLjX = Math.min(255, olyLjX + stepPx * 0.55);
         olyLjY += olyLjVy;
-        olyLjVy += 0.22;
+        olyLjVy += 0.23;
 
         if (olyLjY >= OLY_LJ_GROUND_Y) {
           olyLjY = OLY_LJ_GROUND_Y;
@@ -173,21 +171,36 @@ function drawOlyLongJumpFrame() {
     ctx.fillStyle = "#191b26";
     ctx.fillRect(0, 0, canvas.width, 130);
 
+    // 도움닫기 진행에 따라 점프 라인이 뒤쪽(왼쪽)으로 흘러가며 멀어지도록 배치
+    const foulLineScreenX =
+      olyLjX +
+      (OLY_LJ_FOUL_DIST - olyLjDist) * OLY_LJ_PX_PER_METER -
+      (olyLjPhase === "jump" ? olyLjAirGainPx * 0.65 : 0);
+    const sandStartX = Math.max(0, Math.min(canvas.width, foulLineScreenX + 12));
+
     ctx.fillStyle = "#9e3b33";
-    ctx.fillRect(0, 130, 195, 210);
+    ctx.fillRect(0, 130, sandStartX, 210);
 
     ctx.fillStyle = "#d9b372";
-    ctx.fillRect(195, 130, canvas.width - 195, 210);
+    ctx.fillRect(sandStartX, 130, canvas.width - sandStartX, 210);
 
-    // 트랙 & 모래 스크롤 라인
     const scrollOffset = olyLjPhase === "jump"
       ? (olyLjAirGainPx * 0.6) % 48
-      : (olyLjDist * 14) % 48;
+      : (olyLjDist * OLY_LJ_PX_PER_METER) % 48;
 
     ctx.fillStyle = "rgba(255, 255, 255, 0.26)";
     for (let x = -scrollOffset; x < canvas.width + 48; x += 48) {
       ctx.fillRect(x, 142, 18, 2);
       ctx.fillRect(x + 12, 324, 18, 2);
+    }
+
+    // 점프(발구름) 라인 — 뒤로 멀어지며 스크롤
+    if (foulLineScreenX >= -10 && foulLineScreenX <= canvas.width + 10) {
+      ctx.fillStyle = "#ffd166";
+      ctx.fillRect(foulLineScreenX - 2, 132, 4, 206);
+      ctx.font = "bold 10px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("JUMP LINE", foulLineScreenX, 124);
     }
 
     ctx.fillStyle = "rgba(255, 255, 255, 0.35)";
@@ -211,7 +224,7 @@ function drawOlyLongJumpFrame() {
     // 선수 캐릭터 렌더링
     const bob = olyLjPhase === "run" ? Math.sin(olyLjFrame * 0.45) * (olyLjSpeed > 0.2 ? 3 : 0) : 0;
     const drawY = olyLjY + bob;
-    const legSwing = olyLjPhase === "jump" ? 9 : Math.sin(olyLjFrame * 0.55) * (olyLjSpeed > 0.2 ? 10 : 1);
+    const legSwing = olyLjPhase === "jump" ? 8 : Math.sin(olyLjFrame * 0.55) * (olyLjSpeed > 0.2 ? 10 : 1);
 
     ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
     ctx.beginPath();
@@ -279,7 +292,7 @@ function drawOlyLongJumpFrame() {
 
     ctx.fillStyle = "#72efdd";
     ctx.font = "bold 12px sans-serif";
-    ctx.fillText(`속도 ${olyLjSpeed.toFixed(2)} (발구름선 ~15.8m)`, 12, 38);
+    ctx.fillText(`점프선까지 ${Math.max(0, OLY_LJ_FOUL_DIST - olyLjDist).toFixed(1)}m`, 12, 38);
 
     ctx.fillStyle = "#ffd166";
     ctx.font = "bold 12px sans-serif";
@@ -327,11 +340,11 @@ registerGame({
   id: "oly-longjump",
   title: "멀리뛰기",
   icon: "🏃",
-  desc: "질주 가속과 발구름 타이밍으로 모래밭 최장 기록에 도전!",
+  desc: "긴 도움닫기 가속과 발구름 타이밍으로 모래밭 최장 기록에 도전!",
   aspect: "tall",
   sortOrder: "desc",
   unit: "m",
-  hint: "좌/우 번갈아 달리기 · 발구름선(15.8m) 부근에서 위쪽 터치(PC: ↑/W/Space)로 도약!",
+  hint: "좌/우 번갈아 달리기 · 점프 라인(28.0m) 부근에서 위쪽 터치(PC: ↑/W/Space)로 도약!",
   rankingTitle: "🏃 멀리뛰기 TOP 5 (최장 거리)",
   dbNode: "oly_longjump_scores",
   formatScore: (score) => `${(score / 100).toFixed(2)}m`,
