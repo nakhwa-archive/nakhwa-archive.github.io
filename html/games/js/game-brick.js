@@ -400,3 +400,67 @@ function drawBrickFrame() {
     }
   }
 }
+
+registerGame({
+  id: "brick",
+  title: "벚꽃 벽돌깨기",
+  icon: "🧱",
+  desc: "패들로 공을 튕겨 아이템과 함께 블록 격파!",
+  aspect: "tall",
+  unit: "점",
+  hint: "좌우 드래그(모바일) 또는 방향키(PC) · 스페이스바로 발사!",
+  rankingTitle: "🧱 벚꽃 벽돌깨기 TOP 5",
+  dbNode: "brick_scores",
+  getBadge: () => `BEST ${brickBest}점`,
+  getScore: () => brickScore,
+  reset: resetBrick,
+  draw: drawBrickFrame,
+  stop: () => {
+    brickRunning = false;
+    brickDragging = false;
+  },
+  onPointerDown: (x) => {
+    if (brickOver || !brickRunning) {
+      if (!canRestartNow()) return;
+      resetBrick();
+      return;
+    }
+    launchStuckBrickBalls();
+    brickDragging = true;
+    brickLastDragX = x;
+  },
+  onPointerMove: (x, y, e) => {
+    if (brickDragging && !brickOver) {
+      e.preventDefault();
+      const dx = x - brickLastDragX;
+      brickLastDragX = x;
+      const halfW = brickPaddle.w / 2;
+      brickPaddle.x = Math.max(halfW + 6, Math.min(canvas.width - halfW - 6, brickPaddle.x + dx * 1.15));
+    }
+  },
+  onPointerUp: () => {
+    brickDragging = false;
+  },
+  onKeyDown: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); dodgeKeys.right = true; }
+    }
+    if (e.code === "Space" || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+      e.preventDefault();
+      if (!e.repeat) {
+        if (brickOver || !brickRunning) {
+          if (canRestartNow()) resetBrick();
+        } else {
+          launchStuckBrickBalls();
+        }
+      }
+    }
+  },
+  onKeyUp: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") dodgeKeys.left = false;
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") dodgeKeys.right = false;
+    }
+  }
+});
