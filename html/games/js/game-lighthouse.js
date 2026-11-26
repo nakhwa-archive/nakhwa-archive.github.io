@@ -366,3 +366,61 @@ function drawLighthouseFrame() {
     }
   }
 }
+
+registerGame({
+  id: "lighthouse",
+  title: "낙화 등대 수비대",
+  icon: "🔦",
+  desc: "빛줄기를 회전시켜 어둠 속 요괴들을 정화하는 디펜스",
+  aspect: "tall",
+  unit: "점",
+  hint: "터치·드래그(또는 ←→)로 빛 조준 · 100% 충전 시 섬광탄(스페이스)!",
+  rankingTitle: "🔦 등대 수비대 TOP 5",
+  dbNode: "lighthouse_scores",
+  getBadge: () => `BEST ${lhBest}점`,
+  getScore: () => lhLastScore,
+  reset: resetLighthouse,
+  draw: drawLighthouseFrame,
+  stop: () => {
+    lhRunning = false;
+    lhPointerDown = false;
+  },
+  onPointerDown: (x, y) => {
+    if (lhOver || !lhRunning) {
+      if (!canRestartNow()) return;
+      resetLighthouse();
+      return;
+    }
+    if (y >= 365 && lhEnergy >= 100) {
+      triggerLhFlashBurst();
+      return;
+    }
+    lhPointerDown = true;
+    aimLighthouseAt(x, y);
+  },
+  onPointerMove: (x, y, e) => {
+    if (lhPointerDown && !lhOver) {
+      e.preventDefault();
+      aimLighthouseAt(x, y);
+    }
+  },
+  onPointerUp: () => {
+    lhPointerDown = false;
+  },
+  onKeyDown: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); dodgeKeys.right = true; }
+    }
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (!e.repeat) triggerLhFlashBurst();
+    }
+  },
+  onKeyUp: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") dodgeKeys.left = false;
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") dodgeKeys.right = false;
+    }
+  }
+});
