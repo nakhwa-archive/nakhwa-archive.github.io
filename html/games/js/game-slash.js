@@ -158,3 +158,35 @@ function drawSlashFrame() {
     }
   }
 }
+
+registerGame({
+  id: "slash",
+  title: "낙화 발도술",
+  icon: "⚔️",
+  desc: "찰나의 신호를 포착해 베는 반응속도 승부",
+  aspect: "wide",
+  sortOrder: "asc",
+  unit: "초",
+  hint: "'⚔️ 베기!!' 신호가 뜨는 순간 가장 빠르게 터치!",
+  rankingTitle: "⚡ 낙화 발도술 TOP 5 (빠른 순)",
+  dbNode: "slash_scores",
+  getBadge: () => (slashBestMs > 0 ? `BEST ${(slashBestMs / 1000).toFixed(3)}초` : "BEST --.---"),
+  getScore: () => slashReactionMs,
+  onEnter: () => {
+    initPetals();
+  },
+  reset: resetSlashToIdle,
+  draw: drawSlashFrame,
+  stop: () => {
+    clearTimeout(slashTimer);
+  },
+  onPointerDown: () => {
+    handleSlashAction();
+  },
+  onKeyDown: (e) => {
+    if (e.code === "Space" || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+      e.preventDefault();
+      if (!e.repeat) handleSlashAction();
+    }
+  }
+});
