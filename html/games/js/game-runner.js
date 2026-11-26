@@ -169,3 +169,46 @@ function drawRunnerFrame() {
     }
   }
 }
+
+registerGame({
+  id: "runner",
+  title: "낙화 러너",
+  icon: "🌸",
+  desc: "가시 바위를 점프로 피하며 끝없이 달리기",
+  aspect: "wide",
+  unit: "점",
+  hint: "화면 터치 또는 스페이스바(↑)로 점프!",
+  rankingTitle: "🏆 낙화 러너 TOP 5",
+  dbNode: "runner_scores",
+  getBadge: () => `BEST ${runnerBest}점`,
+  getScore: () => runnerLastScore,
+  reset: resetRunner,
+  draw: drawRunnerFrame,
+  stop: () => {
+    runnerRunning = false;
+  },
+  onPointerDown: () => {
+    if (runnerOver || !runnerRunning) {
+      if (!canRestartNow()) return;
+      resetRunner();
+      return;
+    }
+    if (player.grounded) {
+      player.vy = player.jumpPower;
+      player.grounded = false;
+    }
+  },
+  onKeyDown: (e) => {
+    if (e.code === "Space" || e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
+      e.preventDefault();
+      if (!e.repeat) {
+        if (runnerOver || !runnerRunning) {
+          if (canRestartNow()) resetRunner();
+        } else if (player.grounded) {
+          player.vy = player.jumpPower;
+          player.grounded = false;
+        }
+      }
+    }
+  }
+});
