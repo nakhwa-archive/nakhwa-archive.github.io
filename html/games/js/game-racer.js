@@ -347,3 +347,61 @@ function drawRacerFrame() {
     }
   }
 }
+
+registerGame({
+  id: "racer",
+  title: "낙화 터보 레이서",
+  icon: "🏎️",
+  desc: "4차선 고속도로 질주 & 니트로 부스터로 차량 추월!",
+  aspect: "tall",
+  unit: "점",
+  hint: "좌우 드래그(모바일) 또는 방향키/AD(PC)로 차량 추월!",
+  rankingTitle: "🏎️ 터보 레이서 TOP 5",
+  dbNode: "racer_scores",
+  getBadge: () => `BEST ${racerBest}점`,
+  getScore: () => racerLastScore,
+  reset: resetRacer,
+  draw: drawRacerFrame,
+  stop: () => {
+    racerRunning = false;
+    racerDragging = false;
+  },
+  onPointerDown: (x) => {
+    if (racerOver || !racerRunning) {
+      if (!canRestartNow()) return;
+      resetRacer();
+      return;
+    }
+    racerDragging = true;
+    racerLastDragX = x;
+  },
+  onPointerMove: (x, y, e) => {
+    if (racerDragging && !racerOver) {
+      e.preventDefault();
+      const dx = x - racerLastDragX;
+      racerLastDragX = x;
+      const minX = RACER_ROAD.left + racerCar.w / 2 + 3;
+      const maxX = RACER_ROAD.right - racerCar.w / 2 - 3;
+      racerCar.x = Math.max(minX, Math.min(maxX, racerCar.x + dx * 1.15));
+    }
+  },
+  onPointerUp: () => {
+    racerDragging = false;
+  },
+  onKeyDown: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") { e.preventDefault(); dodgeKeys.left = true; }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") { e.preventDefault(); dodgeKeys.right = true; }
+    }
+    if (e.code === "Space" && (racerOver || !racerRunning)) {
+      e.preventDefault();
+      if (!e.repeat && canRestartNow()) resetRacer();
+    }
+  },
+  onKeyUp: (e) => {
+    if (typeof dodgeKeys !== "undefined") {
+      if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") dodgeKeys.left = false;
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") dodgeKeys.right = false;
+    }
+  }
+});
